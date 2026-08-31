@@ -1,0 +1,11 @@
+{
+    "name": "Song",
+    "alias": "song",
+    "description": "Song management module",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Song\\Providers\\SongServiceProvider"
+    ],
+    "files": []
+}

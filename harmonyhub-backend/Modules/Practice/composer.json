@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/practice",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Practice\\": "app/",
+            "Modules\\Practice\\Database\\Factories\\": "database/factories/",
+            "Modules\\Practice\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Practice\\Tests\\": "tests/"
+        }
+    }
+}

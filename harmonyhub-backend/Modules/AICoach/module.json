@@ -1,0 +1,11 @@
+{
+    "name": "AICoach",
+    "alias": "aicoach",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AICoach\\Providers\\AICoachServiceProvider"
+    ],
+    "files": []
+}

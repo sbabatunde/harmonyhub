@@ -1,0 +1,11 @@
+{
+    "name": "Teacher",
+    "alias": "teacher",
+    "description": "Teacher dashboard and student management module",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Teacher\\Providers\\TeacherServiceProvider"
+    ],
+    "files": []
+}

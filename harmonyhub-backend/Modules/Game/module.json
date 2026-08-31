@@ -1,0 +1,11 @@
+{
+    "name": "Game",
+    "alias": "game",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Game\\Providers\\GameServiceProvider"
+    ],
+    "files": []
+}

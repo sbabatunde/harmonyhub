@@ -1,0 +1,11 @@
+{
+    "name": "Church",
+    "alias": "church",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Church\\Providers\\ChurchServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,12 @@
+{
+    "Auth": true,
+    "Church": true,
+    "Song": true,
+    "Curriculum": true,
+    "Practice": true,
+    "Assignment": true,
+    "Game": true,
+    "Teacher": true,
+    "Karaoke": true,
+    "AICoach": true
+}

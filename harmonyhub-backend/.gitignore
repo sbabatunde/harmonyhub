@@ -1,0 +1,25 @@
+# Laravel
+/vendor/
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.backup
+.env.production
+
+# Laravel storage
+storage/app/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+!storage/app/public/.gitignore
+
+# PHP
+*.cache
+*.tmp
+
+# Composer
+composer.phar

@@ -1,0 +1,11 @@
+{
+    "name": "Karaoke",
+    "alias": "karaoke",
+    "description": "Karaoke processing module",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Karaoke\\Providers\\KaraokeServiceProvider"
+    ],
+    "files": []
+}

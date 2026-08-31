@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* 1. Theme Configuration (Custom Colors, Fonts, and Shadows) */
+@theme {
+  --font-display: "Georgia", serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --shadow-loft: 0 4px 6px -1px rgba(47, 37, 56, 0.1), 0 2px 4px -1px rgba(47, 37, 56, 0.06);
+  --shadow-candle: 0 0 20px rgba(201, 151, 44, 0.3);
+
+  /* Vesper Theme Colors */
+  --color-loft-plum-50: #f5f3f7;
+  --color-loft-plum-100: #e8e3ee;
+  --color-loft-plum-200: #d1c7dd;
+  --color-loft-plum-300: #b3a3c4;
+  --color-loft-plum-400: #927da6;
+  --color-loft-plum-500: #75608a;
+  --color-loft-plum-600: #5f4c71;
+  --color-loft-plum-700: #4e3e5c;
+  --color-loft-plum-800: #3f324b;
+  --color-loft-plum-900: #2f2538;
+  --color-loft-plum-950: #1f1826;
+
+  --color-brass-gold-50: #fbf8eb;
+  --color-brass-gold-100: #f6efcc;
+  --color-brass-gold-200: #edde9c;
+  --color-brass-gold-300: #e3c763;
+  --color-brass-gold-400: #d9af3a;
+  --color-brass-gold-500: #c9972c;
+  --color-brass-gold-600: #ad7624;
+  --color-brass-gold-700: #8a5720;
+  --color-brass-gold-800: #734621;
+  --color-brass-gold-900: #633b20;
+  --color-brass-gold-950: #391f10;
+
+  --color-choir-sage-50: #f4f6f3;
+  --color-choir-sage-100: #e6ebe3;
+  --color-choir-sage-200: #cdd7c8;
+  --color-choir-sage-300: #aaba9f;
+  --color-choir-sage-400: #849a74;
+  --color-choir-sage-500: #667e55;
+  --color-choir-sage-600: #4f6441;
+  --color-choir-sage-700: #405036;
+  --color-choir-sage-800: #35412d;
+  --color-choir-sage-900: #2c3626;
+  --color-choir-sage-950: #171d12;
+
+  --color-ember-coral-50: #fdf4f2;
+  --color-ember-coral-100: #fce6e2;
+  --color-ember-coral-200: #fad1c9;
+  --color-ember-coral-300: #f5b0a2;
+  --color-ember-coral-400: #ed836d;
+  --color-ember-coral-500: #e15d42;
+  --color-ember-coral-600: #cd4326;
+  --color-ember-coral-700: #ac351d;
+  --color-ember-coral-800: #8e2f1d;
+  --color-ember-coral-900: #762c1e;
+  --color-ember-coral-950: #40140b;
+}
+
+/* 2. Base Styles */
+@layer base {
+  body {
+
+    background-color: var(--color-loft-plum-50);
+    color: var(--color-loft-plum-900);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    background-image: 
+      radial-gradient(ellipse at top left, rgba(63, 50, 75, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(217, 175, 58, 0.03) 0%, transparent 50%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+/* 3. Component Classes in v4 */
+@utility btn-primary {
+  background-color: var(--color-loft-plum-800);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition-property: color, background-color, border-color;
+  transition-duration: 200ms;
+  &:hover { background-color: var(--color-loft-plum-700); }
+  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-loft-plum-500); }
+}
+
+@utility btn-gold {
+  background-color: var(--color-brass-gold-400);
+  color: var(--color-loft-plum-900);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition-property: color, background-color, border-color;
+  transition-duration: 200ms;
+  &:hover { background-color: var(--color-brass-gold-300); }
+  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-brass-gold-500); }
+}
+
+@utility card {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-loft);
+  padding: 1.5rem;
+  border: 1px solid var(--color-loft-plum-100);
+}
+
+@utility input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-loft-plum-200);
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  color: var(--color-loft-plum-900);
+  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-loft-plum-500); border-color: transparent; }
+  &::placeholder { color: var(--color-loft-plum-300); }
+}
+
+@utility badge-sage {
+  background-color: var(--color-choir-sage-100);
+  color: var(--color-choir-sage-800);
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@utility badge-gold {
+  background-color: var(--color-brass-gold-100);
+  color: var(--color-brass-gold-800);
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@utility badge-coral {
+  background-color: var(--color-ember-coral-100);
+  color: var(--color-ember-coral-800);
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}

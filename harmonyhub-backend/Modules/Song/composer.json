@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/song",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Song\\": "app/",
+            "Modules\\Song\\Database\\Factories\\": "database/factories/",
+            "Modules\\Song\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Song\\Tests\\": "tests/"
+        }
+    }
+}

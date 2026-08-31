@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Environment
+.env
+
+# Storage (large files)
+storage/uploads/*
+storage/processed/*
+storage/lyrics/*
+!storage/.gitkeep
+
+# Models
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/curriculum",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Curriculum\\": "app/",
+            "Modules\\Curriculum\\Database\\Factories\\": "database/factories/",
+            "Modules\\Curriculum\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Curriculum\\Tests\\": "tests/"
+        }
+    }
+}
