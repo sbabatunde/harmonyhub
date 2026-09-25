@@ -9,7 +9,7 @@ php artisan view:cache
 php artisan migrate --force
 
 # Seed the database (runs only once or safely if using firstOrCreate)
-php artisan db:seed --force
+# php artisan db:seed --force
 
 # Start application server
 php artisan serve --host=0.0.0.0 --port=8000
