@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Curriculum\app\Http\Controllers\CurriculumController;
+use Modules\Curriculum\App\Http\Controllers\CurriculumController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/curriculum', [CurriculumController::class, 'index']);

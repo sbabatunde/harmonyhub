@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Game\app\Http\Controllers\GameController;
+use Modules\Game\App\Http\Controllers\GameController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/games/scores', [GameController::class, 'submitScore']);

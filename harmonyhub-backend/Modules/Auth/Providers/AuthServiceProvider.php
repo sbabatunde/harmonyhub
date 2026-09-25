@@ -4,10 +4,10 @@ namespace Modules\Auth\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Auth\app\Services\AuthService;
-use Modules\Auth\app\Services\UserService;
-use Modules\Auth\app\Services\Contracts\AuthServiceInterface;
-use Modules\Auth\app\Services\Contracts\UserServiceInterface;
+use Modules\Auth\App\Services\AuthService;
+use Modules\Auth\App\Services\UserService;
+use Modules\Auth\App\Services\Contracts\AuthServiceInterface;
+use Modules\Auth\App\Services\Contracts\UserServiceInterface;
 
 class AuthServiceProvider extends ModuleServiceProvider
 {

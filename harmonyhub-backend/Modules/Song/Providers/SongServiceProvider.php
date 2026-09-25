@@ -5,10 +5,10 @@ namespace Modules\Song\Providers;
 use App\Support\Services\Contracts\FileUploadServiceInterface;
 use App\Support\Services\FileUploadService;
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Song\app\Services\Contracts\SongPartServiceInterface;
-use Modules\Song\app\Services\Contracts\SongServiceInterface;
-use Modules\Song\app\Services\SongPartService;
-use Modules\Song\app\Services\SongService;
+use Modules\Song\App\Services\Contracts\SongPartServiceInterface;
+use Modules\Song\App\Services\Contracts\SongServiceInterface;
+use Modules\Song\App\Services\SongPartService;
+use Modules\Song\App\Services\SongService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class SongServiceProvider extends ModuleServiceProvider

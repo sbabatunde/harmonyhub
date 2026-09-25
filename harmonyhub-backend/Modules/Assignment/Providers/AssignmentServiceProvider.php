@@ -3,8 +3,8 @@
 namespace Modules\Assignment\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Assignment\app\Services\AssignmentService;
-use Modules\Assignment\app\Services\Contracts\AssignmentServiceInterface;
+use Modules\Assignment\App\Services\AssignmentService;
+use Modules\Assignment\App\Services\Contracts\AssignmentServiceInterface;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class AssignmentServiceProvider extends ModuleServiceProvider

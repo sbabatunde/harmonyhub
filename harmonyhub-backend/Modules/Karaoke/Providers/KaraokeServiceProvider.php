@@ -3,8 +3,8 @@
 namespace Modules\Karaoke\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Karaoke\app\Services\Contracts\KaraokeServiceInterface;
-use Modules\Karaoke\app\Services\KaraokeService;
+use Modules\Karaoke\App\Services\Contracts\KaraokeServiceInterface;
+use Modules\Karaoke\App\Services\KaraokeService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class KaraokeServiceProvider extends ModuleServiceProvider

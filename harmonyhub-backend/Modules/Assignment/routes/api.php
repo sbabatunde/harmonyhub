@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Assignment\app\Controllers\AssignmentController;
+use Modules\Assignment\App\Controllers\AssignmentController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assignments', [AssignmentController::class, 'index']);

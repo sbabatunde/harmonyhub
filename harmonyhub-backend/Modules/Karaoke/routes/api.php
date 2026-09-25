@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Karaoke\app\Http\Controllers\KaraokeController;
+use Modules\Karaoke\App\Http\Controllers\KaraokeController;
 
 
 // Webhook (no auth - uses secret header)

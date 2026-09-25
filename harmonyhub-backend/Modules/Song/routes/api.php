@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Song\app\Controllers\SongController;
-use Modules\Song\app\Controllers\SongPartController;
+use Modules\Song\App\Controllers\SongController;
+use Modules\Song\App\Controllers\SongPartController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/songs', [SongController::class, 'index']);

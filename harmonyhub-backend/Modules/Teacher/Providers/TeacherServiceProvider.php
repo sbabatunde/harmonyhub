@@ -4,8 +4,8 @@ namespace Modules\Teacher\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Teacher\app\Services\TeacherService;
-use Modules\Teacher\app\Services\Contracts\TeacherServiceInterface;
+use Modules\Teacher\App\Services\TeacherService;
+use Modules\Teacher\App\Services\Contracts\TeacherServiceInterface;
 
 class TeacherServiceProvider extends ModuleServiceProvider
 {

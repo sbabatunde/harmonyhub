@@ -1,0 +1,13 @@
+<?php
+
+namespace Modules\Assignment\App\Services\Contracts;
+
+use Modules\Assignment\App\DTOs\CreateAssignmentData;
+
+interface AssignmentServiceInterface
+{
+  public function listUserAssignments(int $userId, string $role);
+  public function createAssignment(CreateAssignmentData $data);
+  public function getAssignment(int $assignmentId);
+  public function completeAssignment(int $assignmentId, int $userId);
+}

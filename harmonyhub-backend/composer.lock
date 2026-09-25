@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "128e173aa5f216664a70bf1c981ebc9a",
+    "content-hash": "7f2db31c75cd2e605fb7e92f91c49ee4",
     "packages": [
         {
             "name": "brick/math",
@@ -6836,6 +6836,80 @@
                 }
             ],
             "time": "2026-04-26T05:33:54+00:00"
+        },
+        {
+            "name": "vuthaihoc/laravel-db-portable",
+            "version": "v0.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/vuthaihoc/laravel-db-portable.git",
+                "reference": "fd5b8096345a70104320a0c7d12ae0c8b88b6725"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/vuthaihoc/laravel-db-portable/zipball/fd5b8096345a70104320a0c7d12ae0c8b88b6725",
+                "reference": "fd5b8096345a70104320a0c7d12ae0c8b88b6725",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^12.0 || ^13.0",
+                "illuminate/database": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.17",
+                "orchestra/testbench": "^10.0",
+                "phpunit/phpunit": "^11.5",
+                "vuthaihoc/cockroachdb-laravel": "^2.2",
+                "vuthaihoc/laravel-matrixone": "^1.0@beta"
+            },
+            "suggest": {
+                "vuthaihoc/cockroachdb-laravel": "CockroachDB database driver",
+                "vuthaihoc/laravel-matrixone": "MatrixOne database driver"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "DbPortable\\DbPortableServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "DbPortable\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "vuthaihoc",
+                    "email": "vuthaihoc.ttud@gmail.com"
+                }
+            ],
+            "description": "Portable query builder helpers for JSON numbers, NULLS LAST and JSON counters across PostgreSQL/CockroachDB, MySQL/MariaDB/MatrixOne and SQLite, plus scan, audit and copy tools for switching database drivers",
+            "homepage": "https://github.com/vuthaihoc/laravel-db-portable",
+            "keywords": [
+                "cockroachdb",
+                "database",
+                "json",
+                "laravel",
+                "matrixone",
+                "migration",
+                "mysql",
+                "portable",
+                "postgresql"
+            ],
+            "support": {
+                "issues": "https://github.com/vuthaihoc/laravel-db-portable/issues",
+                "source": "https://github.com/vuthaihoc/laravel-db-portable/tree/v0.3.0"
+            },
+            "time": "2026-09-25T07:23:41+00:00"
         },
         {
             "name": "webmozart/assert",

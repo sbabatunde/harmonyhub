@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Teacher\app\Http\Controllers\TeacherController;
+use Modules\Teacher\App\Http\Controllers\TeacherController;
 
 Route::middleware(['auth:sanctum', 'role:teacher,admin'])->group(function () {
     Route::get('/teacher/students', [TeacherController::class, 'students']);

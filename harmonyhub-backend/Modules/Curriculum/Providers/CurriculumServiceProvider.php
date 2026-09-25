@@ -3,8 +3,8 @@
 namespace Modules\Curriculum\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
-use Modules\Curriculum\app\Services\Contracts\CurriculumServiceInterface;
-use Modules\Curriculum\app\Services\CurriculumService;
+use Modules\Curriculum\App\Services\Contracts\CurriculumServiceInterface;
+use Modules\Curriculum\App\Services\CurriculumService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class CurriculumServiceProvider extends ModuleServiceProvider
