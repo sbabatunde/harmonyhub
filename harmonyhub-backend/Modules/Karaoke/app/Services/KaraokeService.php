@@ -130,35 +130,35 @@ class KaraokeService implements KaraokeServiceInterface
       ->first();
   }
 
-  public function handleWebhook(array $data): void
-  {
+public function handleWebhook(array $data): void
+{
     $karaokeTrack = KaraokeTrack::where('song_id', $data['song_id'] ?? 0)->first();
 
     if (!$karaokeTrack) {
-      return;
+        return;
     }
 
     $karaokeTrack->update([
-      'instrumental_file_path' => $data['instrumental_path'] ?? null,
-      'vocal_file_path' => $data['vocal_path'] ?? null,
-      'lyrics_data' => $data['lyrics'] ?? null,
-      'status' => $data['status'] ?? 'failed',
-      'error_message' => $data['error'] ?? null,
+        'instrumental_file_path' => $data['instrumental_path'] ?? null,
+        'vocal_file_path'        => $data['vocal_path'] ?? null,
+        'lyrics_data'            => $data['lyrics'] ?? null,
+        'status'                 => $data['status'] ?? 'failed',
+        'error_message'          => $data['error'] ?? null,
     ]);
 
-    // Auto-create song parts from AI-generated parts
-    if (isset($data['parts']) && is_array($data['parts'])) {
-      foreach ($data['parts'] as $partType => $filePath) {
-        \App\Models\SongPart::updateOrCreate(
-          [
-            'song_id' => $karaokeTrack->song_id,
-            'part_type' => $partType,
-          ],
-          [
-            'audio_file_path' => $filePath,
-          ]
-        );
-      }
+    // Persist AI-generated voice parts onto the Song
+    if (!empty($data['parts']) && is_array($data['parts'])) {
+        foreach ($data['parts'] as $partType => $filePath) {
+            \App\Models\SongPart::updateOrCreate(
+                [
+                    'song_id'   => $karaokeTrack->song_id,
+                    'part_type' => $partType,
+                ],
+                [
+                    'audio_file_path' => $filePath,
+                ]
+            );
+        }
     }
-  }
+}
 }

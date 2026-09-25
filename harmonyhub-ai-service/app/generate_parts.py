@@ -1,85 +1,174 @@
-"""Generate voice parts from isolated vocals using pitch shifting."""
+"""Generate voice parts from isolated vocals using formant-aware pitch shifting."""
 import sys
+import io
 import logging
-import soundfile as sf
-import librosa
-import numpy as np
+import warnings
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO)
+import numpy as np
+import soundfile as sf
+import librosa
+
+# Force UTF-8 output on Windows so emoji/special chars don't crash
+if sys.platform == "win32":
+    try:
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding="utf-8", errors="replace"
+        )
+        sys.stderr = io.TextIOWrapper(
+            sys.stderr.buffer, encoding="utf-8", errors="replace"
+        )
+    except Exception:
+        pass
+
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("parts-generator")
 
-# Voice part shifts (in semitones from original)
-# Positive = higher, Negative = lower
+
+# Conservative shifts — formant preservation keeps timbre natural.
 PART_SHIFTS = {
-    'soprano': +3,    # Higher than original (for female high voice)
-    'alto': 0,        # Original pitch (female lower voice)
-    'tenor': -5,      # Lower (male high voice)
-    'bass': -12,      # Much lower (male low voice)
+    "soprano": +4,
+    "alto":    +1,
+    "tenor":   -3,
+    "bass":    -8,
 }
 
-def generate_part(vocal_path: str, output_path: str, semitones_shift: int, quality: str = 'good'):
-    """Generate a voice part by pitch-shifting the vocals."""
-    logger.info(f"Loading vocals: {vocal_path}")
-    
-    # Load audio (mono for simplicity)
-    audio, sr = librosa.load(vocal_path, sr=None, mono=True)
-    
-    logger.info(f"Original: {len(audio)/sr:.1f} seconds, {sr}Hz")
-    
-    if semitones_shift == 0:
-        # No shift needed - just copy
-        shifted = audio
-    else:
-        logger.info(f"Pitch shifting by {semitones_shift:+d} semitones...")
-        shifted = librosa.effects.pitch_shift(
-            audio, 
-            sr=sr, 
-            n_steps=semitones_shift,
-            bins_per_octave=12,
-        )
-    
-    # Normalize
-    max_val = np.max(np.abs(shifted))
-    if max_val > 0:
-        shifted = shifted / max_val * 0.95
-    
-    # Save
-    sf.write(output_path, shifted, sr)
-    logger.info(f"Saved: {output_path} ({semitones_shift:+d} semitones)")
+TARGET_SR = 44100
+FADE_SECONDS = 0.02
 
-def main():
-    """Generate all voice parts from a vocal track."""
+
+def _apply_fades(audio: np.ndarray, sr: int, fade_seconds: float) -> np.ndarray:
+    fade_len = max(1, int(sr * fade_seconds))
+    if audio.ndim == 1:
+        audio[:fade_len] *= np.linspace(0.0, 1.0, fade_len)
+        audio[-fade_len:] *= np.linspace(1.0, 0.0, fade_len)
+    else:
+        ramp_in = np.linspace(0.0, 1.0, fade_len)
+        ramp_out = np.linspace(1.0, 0.0, fade_len)
+        audio[:, :fade_len] *= ramp_in
+        audio[:, -fade_len:] *= ramp_out
+    return audio
+
+
+def _normalize(audio: np.ndarray, peak: float = 0.95) -> np.ndarray:
+    max_val = float(np.max(np.abs(audio)))
+    if max_val > 0:
+        audio = audio / max_val * peak
+    return audio
+
+
+def _pitch_shift_formant_preserving(
+    audio: np.ndarray, sr: int, semitones: float
+) -> np.ndarray:
+    """Pitch-shift with formant preservation when Rubber Band is available."""
+    try:
+        import pyrubberband as pyrb
+        shifted = pyrb.pitch_shift(audio.T, sr, n_steps=semitones)
+        return shifted.T
+    except Exception as e:
+        logging.getLogger("parts-generator").warning(
+            f"pyrubberband unavailable, falling back to librosa: {e}"
+        )
+
+    return librosa.effects.pitch_shift(
+        audio,
+        sr=sr,
+        n_steps=semitones,
+        bins_per_octave=12,
+        n_fft=2048,
+        hop_length=512,
+    )
+
+
+def _apply_part_eq(audio: np.ndarray, sr: int, part: str) -> np.ndarray:
+    try:
+        from scipy.signal import butter, sosfilt
+    except ImportError:
+        return audio
+
+    nyquist = sr / 2.0
+
+    if part == "soprano":
+        cutoff = min(3000, nyquist - 100)
+        sos = butter(2, cutoff / nyquist, btype="highpass", output="sos")
+        wet = sosfilt(sos, audio, axis=-1)
+        return 0.6 * audio + 0.4 * wet
+
+    if part == "bass":
+        cutoff = min(300, nyquist - 100)
+        sos = butter(2, cutoff / nyquist, btype="lowpass", output="sos")
+        wet = sosfilt(sos, audio, axis=-1)
+        return 0.6 * audio + 0.4 * wet
+
+    return audio
+
+
+def generate_part(
+    vocal_path: Path,
+    output_path: Path,
+    semitones: float,
+    part_name: str,
+) -> None:
+    logger.info(f"  Loading: {vocal_path.name}")
+    audio, sr = librosa.load(str(vocal_path), sr=TARGET_SR, mono=False)
+
+    if audio.ndim == 1:
+        audio = audio[np.newaxis, :]
+
+    duration = audio.shape[1] / sr
+    logger.info(f"  Source: {duration:.1f}s @ {sr}Hz, {audio.shape[0]}ch")
+
+    if abs(semitones) < 0.01:
+        shifted = audio.copy()
+    else:
+        logger.info(f"  Shifting {semitones:+.1f} semitones...")
+        shifted = _pitch_shift_formant_preserving(audio, sr, semitones)
+
+    shifted = shifted[:, : audio.shape[1]]
+    shifted = _apply_part_eq(shifted, sr, part_name)
+    shifted = _apply_fades(shifted, sr, FADE_SECONDS)
+    shifted = _normalize(shifted)
+
+    sf.write(str(output_path), shifted.T, sr, subtype="PCM_16")
+    logger.info(f"  Saved: {output_path.name}")
+
+
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python generate_parts.py <vocal_path> [output_dir]")
         sys.exit(1)
-    
+
     vocal_path = Path(sys.argv[1])
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else vocal_path.parent
-    
+
     if not vocal_path.exists():
         print(f"Error: {vocal_path} not found")
         sys.exit(1)
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    print("\n" + "="*50)
-    print("  HarmonyHub Voice Parts Generator")
-    print("="*50 + "\n")
-    
+
+    # Plain ASCII output — no emoji, no fancy box drawing
+    print("=" * 60)
+    print("  HarmonyHub Voice Parts Generator (formant-aware)")
+    print("=" * 60)
+
     for part_name, shift in PART_SHIFTS.items():
+        print(f"\n[{part_name.upper()}] shift {shift:+.1f} semitones")
         output_path = output_dir / f"{part_name}.wav"
-        print(f"\n🎵 Generating {part_name.upper()} part (shift: {shift:+d})...")
-        generate_part(str(vocal_path), str(output_path), shift)
-    
-    print("\n" + "="*50)
-    print("  ✅ All parts generated successfully!")
-    print("="*50)
-    print(f"\nOutput directory: {output_dir}")
-    print("\nGenerated files:")
-    for part_name in PART_SHIFTS:
-        print(f"  ├── {part_name}.wav")
-    print("\nUpload these files as song parts in HarmonyHub!")
+        try:
+            generate_part(vocal_path, output_path, shift, part_name)
+        except Exception as e:
+            logger.error(f"  Failed: {e}")
+            continue
+
+    print("\n" + "=" * 60)
+    print("  Parts generated")
+    print("=" * 60)
+    print(f"Output: {output_dir}\n")
+
 
 if __name__ == "__main__":
     main()

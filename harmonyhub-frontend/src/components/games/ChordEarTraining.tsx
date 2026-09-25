@@ -14,127 +14,100 @@ import {
   Target,
   Flame,
   BookOpen,
-  ArrowRight,
   RotateCcw,
-  TrendingUp,
+  Music,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
 // ----------------------------------------------------------- Types
-interface Interval {
+interface ChordQuality {
   name: string;
   shortName: string;
-  semitones: number;
-  mnemonic: string;
-  songExample: string;
+  intervals: number[]; // semitones from root
+  mood: string;
+  example: string;
   difficulty: 1 | 2 | 3;
 }
 
-type GamePhase = "instructions" | "playing" | "result" | "gameover";
+type GamePhase = "instructions" | "playing" | "gameover";
+type PlayStyle = "block" | "arpeggio";
 
-// ----------------------------------------------------------- Data
-const INTERVALS: Interval[] = [
+// ----------------------------------------------------------- Chord data
+const CHORD_QUALITIES: ChordQuality[] = [
   {
-    name: "Perfect Unison",
-    shortName: "P1",
-    semitones: 0,
-    mnemonic: "Same note played twice",
-    songExample: "Any note held steady",
+    name: "Major",
+    shortName: "Maj",
+    intervals: [0, 4, 7],
+    mood: "Bright, happy, stable",
+    example: "Most worship songs and hymns",
     difficulty: 1,
   },
   {
-    name: "Major Second",
-    shortName: "M2",
-    semitones: 2,
-    mnemonic: "One whole step up",
-    songExample: "Happy Birthday (first two notes)",
+    name: "Minor",
+    shortName: "Min",
+    intervals: [0, 3, 7],
+    mood: "Sad, soft, reflective",
+    example: "Many Lenten and reflective songs",
     difficulty: 1,
   },
   {
-    name: "Major Third",
-    shortName: "M3",
-    semitones: 4,
-    mnemonic: "Bright, happy sound",
-    songExample: "When the Saints Go Marching In",
-    difficulty: 1,
-  },
-  {
-    name: "Perfect Fourth",
-    shortName: "P4",
-    semitones: 5,
-    mnemonic: "Strong, open sound",
-    songExample: "Here Comes the Bride",
+    name: "Diminished",
+    shortName: "Dim",
+    intervals: [0, 3, 6],
+    mood: "Tense, unstable, resolving",
+    example: "Transitional chords — feel the pull",
     difficulty: 2,
   },
   {
-    name: "Perfect Fifth",
-    shortName: "P5",
-    semitones: 7,
-    mnemonic: "Very stable, powerful",
-    songExample: "Twinkle Twinkle Little Star",
-    difficulty: 2,
-  },
-  {
-    name: "Major Sixth",
-    shortName: "M6",
-    semitones: 9,
-    mnemonic: "Sweet, longing sound",
-    songExample: "My Bonnie Lies Over the Ocean",
-    difficulty: 2,
-  },
-  {
-    name: "Minor Second",
-    shortName: "m2",
-    semitones: 1,
-    mnemonic: "Tense, close together",
-    songExample: "Jaws theme (first two notes)",
-    difficulty: 2,
-  },
-  {
-    name: "Minor Third",
-    shortName: "m3",
-    semitones: 3,
-    mnemonic: "Sad, minor sound",
-    songExample: "Greensleeves (first two notes)",
+    name: "Augmented",
+    shortName: "Aug",
+    intervals: [0, 4, 8],
+    mood: "Mysterious, floating, dream-like",
+    example: "Uncommon but striking",
     difficulty: 3,
   },
   {
-    name: "Tritone",
-    shortName: "TT",
-    semitones: 6,
-    mnemonic: "Unstable, mysterious",
-    songExample: "The Simpsons theme",
-    difficulty: 3,
+    name: "Suspended 4th",
+    shortName: "Sus4",
+    intervals: [0, 5, 7],
+    mood: "Open, unresolved, waiting",
+    example: "Worship 'sus' chords before resolution",
+    difficulty: 2,
   },
   {
-    name: "Minor Sixth",
-    shortName: "m6",
-    semitones: 8,
-    mnemonic: "Sad and beautiful",
-    songExample: "Go Down Moses",
+    name: "Major 7th",
+    shortName: "Maj7",
+    intervals: [0, 4, 7, 11],
+    mood: "Warm, jazzy, lush",
+    example: "Contemporary worship ballads",
     difficulty: 3,
   },
 ];
 
 const DIFFICULTY_POOLS: Record<1 | 2 | 3, number> = {
-  1: 3, // rounds 1-3 use easy intervals only
-  2: 6, // rounds 4-6 add medium
-  3: 10, // rounds 7+ use all
+  1: 2, // major, minor
+  2: 5, // + diminished, augmented, sus4
+  3: 6, // all
 };
 
+const ROOT_FREQUENCY = 261.63; // C4
+const TOTAL_ROUNDS = 10;
+
 // ----------------------------------------------------------- Component
-export const IntervalTrainer: React.FC = () => {
+export const ChordEarTraining: React.FC = () => {
   const [phase, setPhase] = useState<GamePhase>("instructions");
-  const [currentInterval, setCurrentInterval] = useState<Interval | null>(null);
-  const [options, setOptions] = useState<Interval[]>([]);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [target, setTarget] = useState<ChordQuality | null>(null);
+  const [options, setOptions] = useState<ChordQuality[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [round, setRound] = useState(1);
   const [correctCount, setCorrectCount] = useState(0);
-  const [hasPlayedCurrent, setHasPlayedCurrent] = useState(false);
+  const [playStyle, setPlayStyle] = useState<PlayStyle>("block");
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
@@ -147,93 +120,61 @@ export const IntervalTrainer: React.FC = () => {
     return audioContextRef.current;
   }, []);
 
-  const playNote = useCallback(
-    (frequency: number, startTime: number, duration: number) => {
+  const playChord = useCallback(
+    (chord: ChordQuality, style: PlayStyle = "block") => {
       const ctx = getAudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const now = ctx.currentTime + 0.05;
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      // Master gain to avoid clipping when 4 notes hit at once
+      const masterGain = ctx.createGain();
+      masterGain.connect(ctx.destination);
+      masterGain.gain.value = 0.75;
 
-      osc.type = "sine";
-      osc.frequency.value = frequency;
+      chord.intervals.forEach((semitones, index) => {
+        const freq = ROOT_FREQUENCY * Math.pow(2, semitones / 12);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      // Envelope to avoid clicks
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
-      gain.gain.setValueAtTime(0.3, startTime + duration - 0.05);
-      gain.gain.linearRampToValueAtTime(0, startTime + duration);
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.type = "sine";
+        osc.frequency.value = freq;
 
-      osc.start(startTime);
-      osc.stop(startTime + duration);
+        const noteDuration = 1.6;
+        const startTime = style === "block" ? now : now + index * 0.12;
+
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.04);
+        gain.gain.setValueAtTime(0.3, startTime + noteDuration - 0.1);
+        gain.gain.linearRampToValueAtTime(0, startTime + noteDuration);
+
+        osc.start(startTime);
+        osc.stop(startTime + noteDuration);
+      });
     },
     [getAudioContext],
-  );
-
-  const playInterval = useCallback(
-    (interval: Interval) => {
-      const ctx = getAudioContext();
-      const now = ctx.currentTime + 0.05;
-
-      const baseFreq = 261.63; // C4
-      const secondFreq = baseFreq * Math.pow(2, interval.semitones / 12);
-
-      // Play first note
-      playNote(baseFreq, now, 0.6);
-      // Play second note slightly later
-      playNote(secondFreq, now + 0.7, 0.6);
-
-      setHasPlayedCurrent(true);
-    },
-    [getAudioContext, playNote],
-  );
-
-  const playNoteOnly = useCallback(
-    (interval: Interval, whichNote: "first" | "second") => {
-      const ctx = getAudioContext();
-      const now = ctx.currentTime + 0.05;
-
-      const baseFreq = 261.63;
-      const freq =
-        whichNote === "first"
-          ? baseFreq
-          : baseFreq * Math.pow(2, interval.semitones / 12);
-
-      playNote(freq, now, 0.6);
-    },
-    [getAudioContext, playNote],
   );
 
   // --------------------------------------------------------- Question generation
   const generateQuestion = useCallback(
     (currentRound: number) => {
       const poolSize =
-        DIFFICULTY_POOLS[currentRound <= 3 ? 1 : currentRound <= 6 ? 2 : 3];
-      const pool = INTERVALS.slice(0, poolSize);
+        DIFFICULTY_POOLS[currentRound <= 3 ? 1 : currentRound <= 7 ? 2 : 3];
+      const pool = CHORD_QUALITIES.slice(0, poolSize);
 
       const correct = pool[Math.floor(Math.random() * pool.length)];
+      const others = pool.filter((c) => c.name !== correct.name);
+      const shuffled = [...others].sort(() => Math.random() - 0.5);
+      const chosen = shuffled.slice(0, Math.min(3, shuffled.length));
 
-      // Build options: correct + 3 random others from pool
-      const others = pool.filter((i) => i.name !== correct.name);
-      const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
-      const chosen = shuffledOthers.slice(
-        0,
-        Math.min(3, shuffledOthers.length),
-      );
-
-      const allOptions = [correct, ...chosen].sort(() => Math.random() - 0.5);
-
-      setCurrentInterval(correct);
-      setOptions(allOptions);
-      setSelectedOption(null);
+      setTarget(correct);
+      setOptions([correct, ...chosen].sort(() => Math.random() - 0.5));
+      setSelected(null);
       setFeedback(null);
-      setHasPlayedCurrent(false);
 
-      // Auto-play the interval after a short delay
-      setTimeout(() => playInterval(correct), 400);
+      setTimeout(() => playChord(correct, playStyle), 500);
     },
-    [playInterval],
+    [playChord, playStyle],
   );
 
   const startGame = () => {
@@ -246,20 +187,15 @@ export const IntervalTrainer: React.FC = () => {
     generateQuestion(1);
   };
 
-  const handleAnswer = (option: Interval) => {
-    if (selectedOption || !currentInterval) return;
-    if (!hasPlayedCurrent) {
-      playInterval(currentInterval);
-      return;
-    }
+  const handleAnswer = (option: ChordQuality) => {
+    if (selected || !target) return;
 
-    setSelectedOption(option.name);
-    const isCorrect = option.name === currentInterval.name;
+    setSelected(option.name);
+    const isCorrect = option.name === target.name;
 
     if (isCorrect) {
       setFeedback("correct");
-      const points = 10 + streak * 2;
-      setScore((s) => s + points);
+      setScore((s) => s + 15 + streak * 3);
       setStreak((s) => s + 1);
       setBestStreak((b) => Math.max(b, streak + 1));
       setCorrectCount((c) => c + 1);
@@ -268,26 +204,33 @@ export const IntervalTrainer: React.FC = () => {
       setStreak(0);
     }
 
-    // Move to next round
     feedbackTimeoutRef.current = setTimeout(() => {
-      const nextRound = round + 1;
-      if (nextRound > 10) {
-        setPhase("gameover");
-        // Submit score
-        gameService
-          .submitScore({
-            game_type: "interval_trainer",
-            score: score + (isCorrect ? 10 + streak * 2 : 0),
-            accuracy_percentage: Math.round(
-              ((correctCount + (isCorrect ? 1 : 0)) / 10) * 100,
-            ),
-          })
-          .catch((err) => console.error("Score submit failed:", err));
+      const next = round + 1;
+      if (next > TOTAL_ROUNDS) {
+        endGame(isCorrect);
       } else {
-        setRound(nextRound);
-        generateQuestion(nextRound);
+        setRound(next);
+        generateQuestion(next);
       }
-    }, 1800);
+    }, 2000);
+  };
+
+  const endGame = async (lastWasCorrect: boolean) => {
+    setPhase("gameover");
+    const finalScore = score + (lastWasCorrect ? 15 + streak * 3 : 0);
+    const finalCorrect = correctCount + (lastWasCorrect ? 1 : 0);
+
+    if (finalScore > 0) {
+      try {
+        await gameService.submitScore({
+          game_type: "interval_trainer", // reuse bucket
+          score: finalScore,
+          accuracy_percentage: Math.round((finalCorrect / TOTAL_ROUNDS) * 100),
+        });
+      } catch (err) {
+        console.error("Score submit failed:", err);
+      }
+    }
   };
 
   // Cleanup
@@ -297,8 +240,6 @@ export const IntervalTrainer: React.FC = () => {
       if (audioContextRef.current) audioContextRef.current.close();
     };
   }, []);
-
-  const formatScore = () => score.toLocaleString();
 
   // --------------------------------------------------------- Render: Instructions
   if (phase === "instructions") {
@@ -311,14 +252,14 @@ export const IntervalTrainer: React.FC = () => {
             transition={{ type: "spring", damping: 12 }}
             className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brass-gold-100"
           >
-            <BookOpen className="w-10 h-10 text-brass-gold-600" />
+            <Layers className="w-10 h-10 text-brass-gold-600" />
           </motion.div>
           <h2 className="text-3xl font-display text-loft-plum-900">
-            Interval Trainer
+            Chord Ear Training
           </h2>
           <p className="text-loft-plum-600 max-w-lg mx-auto">
-            Train your ear to recognize musical intervals — the distance between
-            two notes. This is the foundation of harmony singing.
+            Identify chord qualities by ear — the foundation for singing harmony
+            and hearing the "color" of worship music.
           </p>
         </div>
 
@@ -332,7 +273,8 @@ export const IntervalTrainer: React.FC = () => {
                 1
               </span>
               <span>
-                You'll hear <strong>two notes played in sequence</strong>
+                A chord plays. <strong>Identify its quality</strong> — major,
+                minor, diminished, etc.
               </span>
             </li>
             <li className="flex items-start">
@@ -340,8 +282,8 @@ export const IntervalTrainer: React.FC = () => {
                 2
               </span>
               <span>
-                Choose which <strong>interval</strong> you heard from the
-                options
+                Switch between <strong>block</strong> (all notes together) and
+                <strong> arpeggio</strong> (notes in sequence)
               </span>
             </li>
             <li className="flex items-start">
@@ -349,8 +291,8 @@ export const IntervalTrainer: React.FC = () => {
                 3
               </span>
               <span>
-                Get <strong>10 rounds</strong>. Difficulty increases after round
-                3 and again at round 7
+                Play <strong>10 rounds</strong>. Difficulty rises at round 4 and
+                round 8
               </span>
             </li>
             <li className="flex items-start">
@@ -358,8 +300,7 @@ export const IntervalTrainer: React.FC = () => {
                 4
               </span>
               <span>
-                Build <strong>streaks</strong> for bonus points. Missing resets
-                your streak
+                <strong>Replay</strong> the chord as many times as you need
               </span>
             </li>
           </ol>
@@ -367,13 +308,27 @@ export const IntervalTrainer: React.FC = () => {
 
         <div className="bg-brass-gold-50 rounded-lg p-5 space-y-3">
           <h3 className="font-display text-lg text-brass-gold-800">
-            Tips for success
+            The chord qualities
           </h3>
           <ul className="space-y-2 text-sm text-brass-gold-700">
-            <li>🎵 Listen for the "shape" — bright, sad, tense, or open</li>
-            <li>🎵 Use the replay button to hear the interval again</li>
-            <li>🎵 Use the reference song for each interval to remember it</li>
-            <li>🎵 Don't rush — the answer buttons stay available</li>
+            <li>
+              <strong>Major</strong> — bright, happy, stable
+            </li>
+            <li>
+              <strong>Minor</strong> — sad, soft, reflective
+            </li>
+            <li>
+              <strong>Diminished</strong> — tense, unstable (round 4+)
+            </li>
+            <li>
+              <strong>Augmented</strong> — mysterious, dream-like (round 4+)
+            </li>
+            <li>
+              <strong>Sus4</strong> — open, unresolved (round 4+)
+            </li>
+            <li>
+              <strong>Major 7th</strong> — warm, jazzy, lush (round 8+)
+            </li>
           </ul>
         </div>
 
@@ -389,15 +344,15 @@ export const IntervalTrainer: React.FC = () => {
 
   // --------------------------------------------------------- Render: Gameover
   if (phase === "gameover") {
-    const accuracy = Math.round((correctCount / 10) * 100);
+    const accuracy = Math.round((correctCount / TOTAL_ROUNDS) * 100);
     const grade =
       accuracy >= 90
-        ? { label: "Outstanding!", color: "text-brass-gold-500" }
+        ? { label: "Beautiful ear!", color: "text-brass-gold-500" }
         : accuracy >= 70
-          ? { label: "Great work!", color: "text-choir-sage-500" }
+          ? { label: "Strong harmonic sense", color: "text-choir-sage-500" }
           : accuracy >= 50
-            ? { label: "Good progress", color: "text-loft-plum-600" }
-            : { label: "Keep practicing", color: "text-loft-plum-500" };
+            ? { label: "Developing well", color: "text-loft-plum-600" }
+            : { label: "Keep training", color: "text-loft-plum-500" };
 
     return (
       <Card className="space-y-6 max-w-lg mx-auto text-center">
@@ -419,17 +374,15 @@ export const IntervalTrainer: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-3 gap-3">
           <div className="bg-loft-plum-50 rounded-lg p-3">
             <p className="text-xs text-loft-plum-500">Score</p>
-            <p className="text-2xl font-display text-loft-plum-900">
-              {formatScore()}
-            </p>
+            <p className="text-2xl font-display text-loft-plum-900">{score}</p>
           </div>
           <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Accuracy</p>
+            <p className="text-xs text-loft-plum-500">Correct</p>
             <p className="text-2xl font-display text-choir-sage-600">
-              {accuracy}%
+              {correctCount}/{TOTAL_ROUNDS}
             </p>
           </div>
           <div className="bg-loft-plum-50 rounded-lg p-3">
@@ -440,7 +393,7 @@ export const IntervalTrainer: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-center space-x-3 pt-2">
+        <div className="flex justify-center pt-2">
           <Button variant="primary" onClick={startGame}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Play Again
@@ -451,26 +404,26 @@ export const IntervalTrainer: React.FC = () => {
   }
 
   // --------------------------------------------------------- Render: Playing
-  const progress = (round / 10) * 100;
+  const progress = (round / TOTAL_ROUNDS) * 100;
   const currentDifficultyLabel =
-    round <= 3 ? "Warmup" : round <= 6 ? "Intermediate" : "Advanced";
+    round <= 3 ? "Warmup" : round <= 7 ? "Intermediate" : "Advanced";
 
   return (
-    <Card className="space-y-6 max-w-3xl mx-auto">
+    <Card className="space-y-5 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-display text-loft-plum-900">
-            Interval Trainer
+            Chord Ear Training
           </h2>
           <p className="text-sm text-loft-plum-500">
-            Round {round} of 10 · {currentDifficultyLabel}
+            Round {round} of {TOTAL_ROUNDS} · {currentDifficultyLabel}
           </p>
         </div>
         <div className="flex items-center space-x-3">
           <Badge variant="plum">
             <Target className="w-3 h-3 mr-1" />
-            {formatScore()} pts
+            {score} pts
           </Badge>
           {streak > 0 && (
             <Badge variant="gold">
@@ -481,56 +434,63 @@ export const IntervalTrainer: React.FC = () => {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress */}
       <ProgressBar value={progress} color="gold" />
 
-      {/* Playback area */}
-      <div className="bg-loft-plum-50 rounded-xl p-8 text-center space-y-4">
-        <p className="text-sm font-medium text-loft-plum-600">
-          Listen to the interval, then choose your answer
+      {/* Playback */}
+      <div className="bg-loft-plum-50 rounded-xl p-6 space-y-4">
+        <p className="text-sm font-medium text-loft-plum-600 text-center">
+          Listen to the chord
         </p>
 
-        <div className="flex justify-center space-x-3">
+        <div className="flex justify-center items-center space-x-3">
           <Button
             variant="primary"
             size="lg"
-            onClick={() => currentInterval && playInterval(currentInterval)}
+            onClick={() => target && playChord(target, playStyle)}
           >
             <Volume2 className="w-5 h-5 mr-2" />
-            Play Interval
+            Play Chord
           </Button>
 
-          {currentInterval && (
-            <>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => playNoteOnly(currentInterval, "first")}
-              >
-                Play 1st Note
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => playNoteOnly(currentInterval, "second")}
-              >
-                Play 2nd Note
-              </Button>
-            </>
-          )}
+          {/* Play style toggle */}
+          <div className="flex items-center space-x-1 bg-white rounded-lg p-1">
+            <button
+              onClick={() => setPlayStyle("block")}
+              className={cn(
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                playStyle === "block"
+                  ? "bg-loft-plum-600 text-white"
+                  : "text-loft-plum-600",
+              )}
+            >
+              Block
+            </button>
+            <button
+              onClick={() => setPlayStyle("arpeggio")}
+              className={cn(
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                playStyle === "arpeggio"
+                  ? "bg-loft-plum-600 text-white"
+                  : "text-loft-plum-600",
+              )}
+            >
+              Arpeggio
+            </button>
+          </div>
         </div>
 
-        <p className="text-xs text-loft-plum-400">
-          Tip: Use the individual notes if you need help
+        <p className="text-xs text-loft-plum-400 text-center">
+          Block = all notes at once · Arpeggio = notes one after another
         </p>
       </div>
 
       {/* Options */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {options.map((option, index) => {
-            const isSelected = selectedOption === option.name;
-            const isCorrectAnswer = currentInterval?.name === option.name;
+            const isSelected = selected === option.name;
+            const isCorrectAnswer = target?.name === option.name;
             const showAsCorrect = feedback && isCorrectAnswer;
             const showAsWrong = feedback === "wrong" && isSelected;
 
@@ -541,11 +501,11 @@ export const IntervalTrainer: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => handleAnswer(option)}
-                disabled={!!selectedOption}
+                disabled={!!selected}
                 className={cn(
-                  "p-4 rounded-xl text-left transition-all border-2",
+                  "p-4 rounded-xl border-2 text-left transition-all",
                   !feedback &&
-                    !selectedOption &&
+                    !selected &&
                     "border-loft-plum-100 hover:border-loft-plum-300 hover:bg-loft-plum-50",
                   showAsCorrect && "border-choir-sage-500 bg-choir-sage-50",
                   showAsWrong && "border-ember-coral-500 bg-ember-coral-50",
@@ -555,16 +515,16 @@ export const IntervalTrainer: React.FC = () => {
                     "border-loft-plum-100 opacity-50",
                 )}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="font-display text-loft-plum-900">
                       {option.name}
                     </p>
                     <p className="text-xs text-loft-plum-500 mt-0.5">
-                      {option.mnemonic}
+                      {option.mood}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                  <div className="flex-shrink-0 ml-2">
                     {showAsCorrect && (
                       <CheckCircle className="w-5 h-5 text-choir-sage-500" />
                     )}
@@ -579,9 +539,9 @@ export const IntervalTrainer: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Feedback with reference */}
+      {/* Feedback */}
       <AnimatePresence>
-        {feedback && currentInterval && (
+        {feedback && target && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -597,7 +557,7 @@ export const IntervalTrainer: React.FC = () => {
               {feedback === "correct" ? (
                 <CheckCircle className="w-5 h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
               ) : (
-                <Target className="w-5 h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
+                <Sparkles className="w-5 h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
               )}
               <div className="flex-1">
                 <p
@@ -609,11 +569,14 @@ export const IntervalTrainer: React.FC = () => {
                   )}
                 >
                   {feedback === "correct"
-                    ? `Correct! +${10 + (streak - 1) * 2} points`
-                    : `Not quite. It was ${currentInterval.name}`}
+                    ? `Correct! It was ${target.name}`
+                    : `The chord was ${target.name}`}
                 </p>
                 <p className="text-sm text-loft-plum-600 mt-1">
-                  <strong>Remember it by:</strong> {currentInterval.songExample}
+                  <strong>Character:</strong> {target.mood}
+                </p>
+                <p className="text-xs text-loft-plum-500 mt-0.5">
+                  <strong>Where you'll hear it:</strong> {target.example}
                 </p>
               </div>
             </div>

@@ -112,6 +112,19 @@ Frontend: React 18, TypeScript, Tailwind CSS, Zustand, TanStack Query
 
 AI Service: Python FastAPI, Demucs, Whisper, Ollama
 
+### Optional: Better pitch-shifting quality
+
+For higher-quality voice-part generation, install the Rubber Band CLI:
+
+1. Download from https://breakfastquay.com/rubberband/
+2. Extract `rubberband.exe` + `sndfile.dll` to a folder (e.g., `C:\rubberband`)
+3. Add the folder to your system PATH
+4. Verify with `rubberband --version`
+5. Install the Python wrapper: `pip install pyrubberband`
+
+Without this, the service still works but falls back to librosa's
+lower-quality pitch-shift algorithm.
+
 📄 License
 
 Private project for church use.

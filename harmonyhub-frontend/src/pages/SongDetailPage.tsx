@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { songService } from "@/api/services/songService";
 import { karaokeService } from "@/api/services/karaokeService";
 import { Spinner } from "@/components/ui/Spinner";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { AudioPlayer } from "@/components/practice/AudioPlayer";
+import { CombinedPlayer } from "@/components/practice/CombinedPlayer";
 import { KaraokePlayer } from "@/components/karaoke/KaraokePlayer";
 import {
   Music,
@@ -24,9 +25,10 @@ import {
   X,
   Mic2,
   ArrowLeft,
+  Layers,
 } from "lucide-react";
 
-// Part Upload Form with scrollable content
+// ---------- Part Upload Form ----------
 interface PartUploadFormProps {
   songId: number;
   isOpen: boolean;
@@ -55,7 +57,8 @@ const PartUploadForm: React.FC<PartUploadFormProps> = ({
     mutationFn: (formData: FormData) =>
       songService.createSongPart(songId, formData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["song", songId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ["song", songId] });
+      queryClient.invalidateQueries({ queryKey: ["song-parts", songId] });
       onClose();
       setPartType("");
       setAudioFile(null);
@@ -153,6 +156,7 @@ const PartUploadForm: React.FC<PartUploadFormProps> = ({
   );
 };
 
+// ---------- Main Page ----------
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -172,16 +176,20 @@ export default function SongDetailPage() {
 
   const { data: karaokeStatus } = useQuery({
     queryKey: ["karaoke-status", songId],
-    queryFn: async () => {
-      const status = await karaokeService.getStatus(songId);
-      return status;
-    },
+    queryFn: () => karaokeService.getStatus(songId),
     enabled: songId > 0,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (status === "processing" || status === "pending") return 5000;
       return false;
     },
+  });
+
+  // Fetch full karaoke track (for instrumental + lyrics in CombinedPlayer)
+  const { data: karaokeTrack } = useQuery({
+    queryKey: ["karaoke-track", songId],
+    queryFn: () => karaokeService.getTrack(songId),
+    enabled: songId > 0 && karaokeStatus?.status === "ready",
   });
 
   const requestKaraokeMutation = useMutation({
@@ -214,7 +222,7 @@ export default function SongDetailPage() {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      {/* Back button */}
+      {/* Back */}
       <button
         onClick={() => navigate("/songs")}
         className="flex items-center text-loft-plum-600 hover:text-loft-plum-800 transition-colors"
@@ -223,7 +231,7 @@ export default function SongDetailPage() {
         Back to Songs
       </button>
 
-      {/* Song Header */}
+      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-4xl font-display text-loft-plum-900">
@@ -238,7 +246,7 @@ export default function SongDetailPage() {
         </Badge>
       </div>
 
-      {/* Metadata - camelCase */}
+      {/* Metadata */}
       <div className="flex items-center space-x-3 flex-wrap">
         {song.keySignature && (
           <Badge variant="neutral">
@@ -255,7 +263,7 @@ export default function SongDetailPage() {
         {song.isPublicDomain && <Badge variant="sage">Public Domain</Badge>}
       </div>
 
-      {/* Full Audio - Pass raw path, let AudioPlayer handle URL resolution */}
+      {/* Full Track */}
       {song.audioFilePath && (
         <Card>
           <h2 className="text-xl font-display text-loft-plum-900 mb-4 flex items-center">
@@ -320,7 +328,32 @@ export default function SongDetailPage() {
         )}
       </Card>
 
-      {/* Song Parts - Pass raw paths, let AudioPlayer handle URL resolution */}
+      {/* Full Practice Experience — only when there are parts */}
+      {song.parts && song.parts.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-display text-loft-plum-900 flex items-center">
+              <Layers className="w-5 h-5 mr-2 text-brass-gold-500" />
+              Full Practice Experience
+            </h2>
+            <Badge variant="gold">All-in-One</Badge>
+          </div>
+          <p className="text-sm text-loft-plum-600 mb-4">
+            Play all voice parts together with the instrumental and live lyrics.
+            Adjust the mixer to focus on your part.
+          </p>
+          <CombinedPlayer
+            parts={song.parts}
+            instrumentalPath={
+              karaokeTrack?.instrumental_file_path || song.audioFilePath
+            }
+            lyrics={karaokeTrack?.lyrics_data}
+            title={`${song.title} — Full Mix`}
+          />
+        </Card>
+      )}
+
+      {/* Voice Parts (individual) */}
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-display text-loft-plum-900 flex items-center">
@@ -361,7 +394,7 @@ export default function SongDetailPage() {
         )}
       </Card>
 
-      {/* Sheet Music - camelCase */}
+      {/* Sheet Music */}
       {song.sheetMusicPath && (
         <Card>
           <h2 className="text-xl font-display text-loft-plum-900 mb-4 flex items-center">
@@ -379,7 +412,6 @@ export default function SongDetailPage() {
         </Card>
       )}
 
-      {/* Part Upload Modal */}
       <PartUploadForm
         songId={songId}
         isOpen={isPartFormOpen}

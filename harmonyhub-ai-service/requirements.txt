@@ -14,6 +14,7 @@ librosa>=0.10.2.post1
 soundfile>=0.12.1
 numpy>=1.26.4
 scipy>=1.14.1
+pyrubberband>=0.4.0
 
 # Transcription
 openai-whisper>=20240930

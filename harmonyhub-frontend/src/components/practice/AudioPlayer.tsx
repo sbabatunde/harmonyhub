@@ -27,7 +27,6 @@ interface AudioPlayerProps {
   onEnded?: () => void;
   className?: string;
   showLoopControls?: boolean;
-  showWaveform?: boolean;
   initialPlaybackRate?: number;
 }
 
@@ -38,10 +37,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   onEnded,
   className,
   showLoopControls = true,
-  showWaveform = false,
   initialPlaybackRate = 1,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -55,7 +54,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Resolve URL once
+  // Guards to prevent re-loading the same src
+  const loadedSrcRef = useRef<string>("");
+
+  // True while user is actively dragging the seek slider.
+  const isDraggingRef = useRef(false);
+  // Pending seek target — only committed on drag end.
+  const pendingSeekRef = useRef<number | null>(null);
+
   const resolvedSrc = useMemo(() => {
     if (!src) return "";
     if (
@@ -68,14 +74,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return resolveAudioUrl(src);
   }, [src]);
 
-  // Use refs for mutable values
-  const isPlayingRef = useRef(false);
+  // Refs mirroring state used inside audio event handlers
   const loopStateRef = useRef({ isLooping, loopStart, loopEnd });
   const onTimeUpdateRef = useRef(onTimeUpdate);
   const onEndedRef = useRef(onEnded);
-  const audioInitializedRef = useRef(false);
 
-  // Update refs
   useEffect(() => {
     loopStateRef.current = { isLooping, loopStart, loopEnd };
   }, [isLooping, loopStart, loopEnd]);
@@ -88,80 +91,89 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     onEndedRef.current = onEnded;
   }, [onEnded]);
 
-  // CRITICAL: Initialize audio element and set src imperatively
+  // Set src ONLY when it genuinely changes (guarded by loadedSrcRef)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !resolvedSrc) return;
+
+    // Hard guard: if we've already loaded this exact src, do nothing.
+    // Prevents audio.load() from resetting position to 0 on re-renders.
+    if (loadedSrcRef.current === resolvedSrc) return;
+
+    loadedSrcRef.current = resolvedSrc;
+    audio.src = resolvedSrc;
+    audio.load();
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+    setError(null);
+  }, [resolvedSrc]);
+
+  // Attach audio element event listeners ONCE
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Set src only if it's different
-    if (audio.src !== resolvedSrc) {
-      audio.src = resolvedSrc;
-    }
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+      setIsLoading(false);
+    };
 
-    // Set up event listeners only once
-    if (!audioInitializedRef.current) {
-      audioInitializedRef.current = true;
+    const handleTimeUpdate = () => {
+      // Skip while dragging so we don't fight the user's slider position
+      if (isDraggingRef.current) return;
 
-      const handleLoadedMetadata = () => {
-        setDuration(audio.duration);
-        setIsLoading(false);
-      };
+      const time = audio.currentTime;
+      setCurrentTime(time);
+      onTimeUpdateRef.current?.(time);
 
-      const handleTimeUpdate = () => {
-        const time = audio.currentTime;
-        setCurrentTime(time);
-        onTimeUpdateRef.current?.(time);
-
-        const { isLooping, loopStart, loopEnd } = loopStateRef.current;
-        if (isLooping && loopStart !== null && loopEnd !== null) {
-          if (time >= loopEnd) {
-            audio.currentTime = loopStart;
-          }
+      const { isLooping, loopStart, loopEnd } = loopStateRef.current;
+      if (isLooping && loopStart !== null && loopEnd !== null) {
+        if (time >= loopEnd) {
+          audio.currentTime = loopStart;
         }
-      };
+      }
+    };
 
-      const handleEnded = () => {
-        isPlayingRef.current = false;
-        setIsPlaying(false);
-        onEndedRef.current?.();
-      };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      onEndedRef.current?.();
+    };
 
-      const handleWaiting = () => setIsLoading(true);
+    const handleWaiting = () => setIsLoading(true);
+    const handlePlaying = () => {
+      setIsLoading(false);
+      setIsPlaying(true);
+    };
+    const handlePause = () => setIsPlaying(false);
+    const handleError = () => {
+      setError("Failed to load audio");
+      setIsLoading(false);
+    };
 
-      const handlePlaying = () => {
-        setIsLoading(false);
-        isPlayingRef.current = true;
-        setIsPlaying(true);
-      };
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("playing", handlePlaying);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("error", handleError);
 
-      const handlePause = () => {
-        isPlayingRef.current = false;
-        setIsPlaying(false);
-      };
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("playing", handlePlaying);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("error", handleError);
+    };
+  }, []);
 
-      const handleError = () => {
-        setError("Failed to load audio");
-        setIsLoading(false);
-      };
-
-      audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.addEventListener("timeupdate", handleTimeUpdate);
-      audio.addEventListener("ended", handleEnded);
-      audio.addEventListener("waiting", handleWaiting);
-      audio.addEventListener("playing", handlePlaying);
-      audio.addEventListener("pause", handlePause);
-      audio.addEventListener("error", handleError);
-    }
-  }, [resolvedSrc]);
-
-  // Update volume
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
-  // Update playback rate
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
@@ -169,68 +181,82 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [playbackRate]);
 
-  // Playback controls
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlayingRef.current) {
-      audio.pause();
-    } else {
+    if (audio.paused) {
       audio.play().catch((err) => {
         console.error("Error playing audio:", err);
         setError("Failed to play audio");
       });
+    } else {
+      audio.pause();
     }
   }, []);
 
-  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    const audio = audioRef.current;
+  // Update UI immediately while dragging; commit only on release
+  const handleSeekInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const time = parseFloat(e.target.value);
+      if (!isFinite(time)) return;
+      pendingSeekRef.current = time;
+      setCurrentTime(time);
+    },
+    [],
+  );
 
-    if (audio && isFinite(time)) {
-      // IMPORTANT: Just set currentTime, don't update state here
-      audio.currentTime = time;
+  const handleSeekStart = useCallback(() => {
+    isDraggingRef.current = true;
+  }, []);
+
+  const handleSeekCommit = useCallback(() => {
+    const audio = audioRef.current;
+    const pending = pendingSeekRef.current;
+
+    isDraggingRef.current = false;
+    pendingSeekRef.current = null;
+
+    if (audio && pending !== null && isFinite(pending)) {
+      if (Math.abs(audio.currentTime - pending) > 0.05) {
+        audio.currentTime = pending;
+      }
     }
   }, []);
 
-  const skipForward = useCallback((seconds: number = 10) => {
+  const skipForward = useCallback((seconds = 10) => {
     const audio = audioRef.current;
-    if (audio && audio.duration) {
-      // IMPORTANT: Just set currentTime, don't update state here
-      audio.currentTime = Math.min(audio.currentTime + seconds, audio.duration);
-    }
+    if (!audio || !isFinite(audio.duration)) return;
+    const t = Math.min(audio.currentTime + seconds, audio.duration);
+    audio.currentTime = t;
+    setCurrentTime(t);
   }, []);
 
-  const skipBackward = useCallback((seconds: number = 10) => {
+  const skipBackward = useCallback((seconds = 10) => {
     const audio = audioRef.current;
-    if (audio) {
-      // IMPORTANT: Just set currentTime, don't update state here
-      audio.currentTime = Math.max(audio.currentTime - seconds, 0);
-    }
+    if (!audio) return;
+    const t = Math.max(audio.currentTime - seconds, 0);
+    audio.currentTime = t;
+    setCurrentTime(t);
   }, []);
 
   const toggleMute = useCallback(() => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.muted = !audio.muted;
-      setIsMuted(audio.muted);
-    }
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    setIsMuted(audio.muted);
   }, []);
 
   const handleVolumeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newVolume = parseFloat(e.target.value);
+      const v = parseFloat(e.target.value);
       const audio = audioRef.current;
-
-      if (audio && isFinite(newVolume)) {
-        audio.volume = newVolume;
-        setVolume(newVolume);
-
-        if (newVolume > 0 && audio.muted) {
-          audio.muted = false;
-          setIsMuted(false);
-        }
+      if (!audio || !isFinite(v)) return;
+      audio.volume = v;
+      setVolume(v);
+      if (v > 0 && audio.muted) {
+        audio.muted = false;
+        setIsMuted(false);
       }
     },
     [],
@@ -238,23 +264,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const changePlaybackRate = useCallback((rate: number) => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.playbackRate = rate;
-      audio.preservesPitch = true;
-      setPlaybackRate(rate);
-    }
+    if (!audio) return;
+    audio.playbackRate = rate;
+    audio.preservesPitch = true;
+    setPlaybackRate(rate);
   }, []);
 
   const setLoopPoint = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    const currentAudioTime = audio.currentTime;
-
+    const t = audio.currentTime;
     if (loopStart === null) {
-      setLoopStart(currentAudioTime);
+      setLoopStart(t);
     } else if (loopEnd === null) {
-      setLoopEnd(currentAudioTime);
+      setLoopEnd(t);
       setIsLooping(true);
     } else {
       setLoopStart(null);
@@ -271,23 +294,21 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const restartAudio = useCallback(() => {
     const audio = audioRef.current;
-    if (audio) {
-      // IMPORTANT: Just set currentTime, don't update state here
-      audio.currentTime = 0;
-    }
+    if (!audio) return;
+    audio.currentTime = 0;
+    setCurrentTime(0);
   }, []);
 
   const formatTime = useCallback((time: number) => {
     if (!isFinite(time) || time < 0) return "0:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    const m = Math.floor(time / 60);
+    const s = Math.floor(time % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
   }, []);
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* CRITICAL: Don't set src in JSX, set it imperatively via useEffect */}
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="auto" />
 
       {/* Title and Status */}
       <div className="flex items-center justify-between">
@@ -326,7 +347,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             max={duration || 0}
             step="0.1"
             value={currentTime}
-            onChange={handleSeek}
+            onChange={handleSeekInput}
+            onMouseDown={handleSeekStart}
+            onMouseUp={handleSeekCommit}
+            onTouchStart={handleSeekStart}
+            onTouchEnd={handleSeekCommit}
+            onKeyUp={handleSeekCommit}
             className="w-full h-2 bg-loft-plum-100 rounded-full appearance-none cursor-pointer
                        [&::-webkit-slider-thumb]:appearance-none
                        [&::-webkit-slider-thumb]:w-4
@@ -338,22 +364,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                        [&::-webkit-slider-thumb]:hover:bg-loft-plum-500"
           />
 
-          {/* Loop markers */}
           {loopStart !== null && duration > 0 && (
             <div
               className="absolute top-0 w-0.5 h-5 bg-brass-gold-400 -ml-0.25 pointer-events-none"
               style={{ left: `${(loopStart / duration) * 100}%` }}
-              title={`Loop start: ${formatTime(loopStart)}`}
             />
           )}
           {loopEnd !== null && duration > 0 && (
             <div
               className="absolute top-0 w-0.5 h-5 bg-brass-gold-400 -ml-0.25 pointer-events-none"
               style={{ left: `${(loopEnd / duration) * 100}%` }}
-              title={`Loop end: ${formatTime(loopEnd)}`}
             />
           )}
         </div>
+
         <div className="flex justify-between text-sm text-loft-plum-500">
           <span>{formatTime(currentTime)}</span>
           {isLooping && loopStart !== null && loopEnd !== null && (
@@ -470,7 +494,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         </div>
       </div>
 
-      {/* Playback Settings Panel */}
+      {/* Playback Settings */}
       {showSettings && (
         <div className="bg-loft-plum-50 rounded-lg p-4 space-y-3">
           <div>
