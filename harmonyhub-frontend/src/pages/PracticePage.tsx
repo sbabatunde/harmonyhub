@@ -20,23 +20,16 @@ export default function PracticePage() {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [selectedPart, setSelectedPart] = useState<SongPart | null>(null);
   const [isPracticing, setIsPracticing] = useState(false);
-  const [practiceStartTime, setPracticeStartTime] = useState<number | null>(
-    null,
-  );
+  // const [practiceStartTime, setPracticeStartTime] = useState<number | null>(
+  //   null,
+  // );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [accuracyReadings, setAccuracyReadings] = useState<number[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const {
-    pitch,
-    note,
-    cents,
-    isListening,
-    startListening,
-    stopListening,
-    error,
-  } = usePitchDetection();
+  const { pitch, note, cents, startListening, stopListening, error } =
+    usePitchDetection();
 
   const { data: songs, isLoading: isLoadingSongs } = useQuery({
     queryKey: ["songs"],
@@ -93,7 +86,6 @@ export default function PracticePage() {
   const handleStartPractice = async () => {
     await startListening();
     setIsPracticing(true);
-    setPracticeStartTime(Date.now());
     setElapsedSeconds(0);
     setAccuracyReadings([]);
     setSaveMessage(null);
@@ -122,7 +114,7 @@ export default function PracticePage() {
         average_pitch_accuracy: avgAccuracy
           ? Math.round(avgAccuracy * 100) / 100
           : null,
-        notes: `Practiced ${selectedSong.title}${selectedPart ? ` - ${selectedPart.part_type}` : ""}`,
+        notes: `Practiced ${selectedSong.title}${selectedPart ? ` - ${selectedPart.partType}` : ""}`,
       });
     }
   };
@@ -142,7 +134,7 @@ export default function PracticePage() {
 
   if (isLoadingSongs) return <Spinner />;
 
-  const songList = songs?.data || [];
+  const songList = Array.isArray(songs) ? songs : [];
 
   return (
     <div className="space-y-6">
@@ -219,9 +211,9 @@ export default function PracticePage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-loft-plum-900 capitalize">
-                        {part.part_type}
+                        {part.partType}
                       </span>
-                      {part.audio_file_path && (
+                      {part.audioFilePath && (
                         <Play className="w-4 h-4 text-loft-plum-400" />
                       )}
                     </div>
@@ -237,11 +229,11 @@ export default function PracticePage() {
           {selectedSong ? (
             <>
               {/* Audio Player */}
-              {selectedPart?.audio_file_path && (
+              {selectedPart?.audioFilePath && (
                 <Card>
                   <AudioPlayer
-                    src={selectedPart.audio_file_path}
-                    title={`${selectedSong.title} - ${selectedPart.part_type} Part`}
+                    src={selectedPart.audioFilePath}
+                    title={`${selectedSong.title} - ${selectedPart.partType} Part`}
                   />
                 </Card>
               )}
@@ -320,7 +312,7 @@ export default function PracticePage() {
                   <div>
                     <p className="text-sm text-loft-plum-500">Part</p>
                     <p className="font-medium text-loft-plum-900 capitalize">
-                      {selectedPart?.part_type || "Full Song"}
+                      {selectedPart?.partType || "Full Song"}
                     </p>
                   </div>
                   <div>

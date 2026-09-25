@@ -7,15 +7,11 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { gameService } from "@/api/services/gameService";
 import {
   Play,
-  CheckCircle,
-  XCircle,
   Trophy,
   Target,
   Flame,
-  BookOpen,
   RotateCcw,
   Drum,
-  Zap,
   MousePointer2,
   Clock,
 } from "lucide-react";
@@ -133,7 +129,7 @@ const SCORE_VALUES = {
 
 const TOTAL_ROUNDS = 5;
 const COUNTDOWN_START = 3;
-const VISUAL_LEAD_MS = 2000; // how long before the beat the visual indicator starts
+// const VISUAL_LEAD_MS = 2000; // how long before the beat the visual indicator starts
 
 // ----------------------------------------------------------- Component
 export const RhythmMaster: React.FC = () => {
@@ -283,7 +279,7 @@ export const RhythmMaster: React.FC = () => {
     setPerfectCount(0);
     setRound(1);
 
-    const first = pickPattern(1);
+    pickPattern(1);
     // Kick off countdown after a tick so the pattern is set
     setTimeout(() => startCountdown(), 100);
   };
@@ -398,20 +394,19 @@ export const RhythmMaster: React.FC = () => {
   }, []);
 
   // --------------------------------------------------------- Helpers
-  const formatMs = (ms: number) => `${Math.round(ms)}ms`;
 
-  const getAccuracyColor = (acc: TapResult["accuracy"]) => {
-    switch (acc) {
-      case "perfect":
-        return "bg-choir-sage-500 text-white";
-      case "good":
-        return "bg-brass-gold-400 text-loft-plum-900";
-      case "okay":
-        return "bg-loft-plum-300 text-loft-plum-900";
-      case "miss":
-        return "bg-ember-coral-500 text-white";
-    }
-  };
+  // const getAccuracyColor = (acc: TapResult["accuracy"]) => {
+  //   switch (acc) {
+  //     case "perfect":
+  //       return "bg-choir-sage-500 text-white";
+  //     case "good":
+  //       return "bg-brass-gold-400 text-loft-plum-900";
+  //     case "okay":
+  //       return "bg-loft-plum-300 text-loft-plum-900";
+  //     case "miss":
+  //       return "bg-ember-coral-500 text-white";
+  //   }
+  // };
 
   // --------------------------------------------------------- Render: Instructions
   if (phase === "instructions") {

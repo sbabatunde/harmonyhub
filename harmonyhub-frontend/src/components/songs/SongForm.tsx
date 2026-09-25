@@ -7,10 +7,9 @@ import { songService } from "@/api/services/songService";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Badge } from "@/components/ui/Badge";
 import { DIFFICULTY_LEVELS } from "@/utils/constants";
 import { Upload, FileAudio, FileText, X } from "lucide-react";
-import { logger } from "@/utils/logger";
+// import { logger } from "@/utils/logger";
 
 const songSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -22,7 +21,8 @@ const songSchema = z.object({
   licensing_info: z.string().optional(),
 });
 
-type SongFormData = z.infer<typeof songSchema>;
+// KEY: use z.input
+type SongFormData = z.input<typeof songSchema>;
 
 interface SongFormProps {
   isOpen: boolean;
@@ -32,7 +32,6 @@ interface SongFormProps {
 export const SongForm: React.FC<SongFormProps> = ({ isOpen, onClose }) => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [sheetMusic, setSheetMusic] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const queryClient = useQueryClient();
 
   const {
@@ -52,29 +51,30 @@ export const SongForm: React.FC<SongFormProps> = ({ isOpen, onClose }) => {
       reset();
       setAudioFile(null);
       setSheetMusic(null);
-      setUploadProgress(0);
     },
   });
 
-  const onSubmit = async (data: SongFormData) => {
-    logger.info("Starting song upload...");
-
+  const onSubmit = (data: SongFormData) => {
     const formData = new FormData();
 
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== "" && value !== false) {
-        formData.append(key, value.toString());
-      }
-    });
+    formData.append("title", data.title);
+    if (data.artist) formData.append("artist", data.artist);
+    if (data.key_signature)
+      formData.append("key_signature", data.key_signature);
+    if (data.tempo) formData.append("tempo", data.tempo);
+    if (data.difficulty_level)
+      formData.append("difficulty_level", data.difficulty_level);
+    if (data.licensing_info)
+      formData.append("licensing_info", data.licensing_info);
 
-    if (audioFile) {
-      formData.append("audio_file", audioFile);
-    }
-    if (sheetMusic) {
-      formData.append("sheet_music", sheetMusic);
-    }
+    formData.append(
+      "is_public_domain",
+      (data.is_public_domain ?? false) ? "1" : "0",
+    );
 
-    // Just call the service - interceptor handles CSRF
+    if (audioFile) formData.append("audio_file", audioFile);
+    if (sheetMusic) formData.append("sheet_music", sheetMusic);
+
     createSongMutation.mutate(formData);
   };
 

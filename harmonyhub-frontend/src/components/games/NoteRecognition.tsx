@@ -13,11 +13,9 @@ import {
   Trophy,
   Target,
   Flame,
-  BookOpen,
   RotateCcw,
   Music,
   Headphones,
-  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
@@ -77,10 +75,9 @@ export const NoteRecognition: React.FC = () => {
   const [bestStreak, setBestStreak] = useState(0);
   const [round, setRound] = useState(1);
   const [correctCount, setCorrectCount] = useState(0);
-  const [showHint, setShowHint] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {
@@ -128,8 +125,6 @@ export const NoteRecognition: React.FC = () => {
       setOptions([correct, ...chosen].sort(() => Math.random() - 0.5));
       setSelected(null);
       setFeedback(null);
-      setShowHint(false);
-
       // Auto-play after a short delay
       setTimeout(() => playTone(correct.frequency), 500);
     },

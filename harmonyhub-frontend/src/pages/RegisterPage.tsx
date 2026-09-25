@@ -8,28 +8,25 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { VOICE_PARTS } from "@/utils/constants";
 
-const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  password_confirmation: z.string(),
-  church_id: z.string().min(1, "Church ID is required"),
-  voice_part: z.string().optional(),
-  vocal_range_low: z.string().optional(),
-  vocal_range_high: z.string().optional(),
-  age_bracket: z.string().optional(),
-  // ↓ Give it a default so it is ALWAYS boolean in the output type
-  is_minor: z.boolean().default(false),
-  // ↓ Allow empty string OR valid email
-  guardian_email: z.string().email().optional().or(z.literal("")),
-}).refine((data) => data.password === data.password_confirmation, {
-  message: "Passwords don't match",
-  path: ["password_confirmation"],
-});
+const registerSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    password_confirmation: z.string(),
+    church_id: z.string().min(1, "Church ID is required"),
+    voice_part: z.string().optional(),
+    vocal_range_low: z.string().optional(),
+    vocal_range_high: z.string().optional(),
+    age_bracket: z.string().optional(),
+    is_minor: z.boolean().default(false),
+    guardian_email: z.string().email().optional().or(z.literal("")),
+  })
+  .refine((data) => data.password === data.password_confirmation, {
+    message: "Passwords don't match",
+    path: ["password_confirmation"],
+  });
 
-// ← The KEY fix: use z.input for the form data type
-// z.input = what the form receives (is_minor can be undefined)
-// z.output = what the resolver produces (is_minor is boolean)
 type RegisterFormData = z.input<typeof registerSchema>;
 
 export default function RegisterPage() {
@@ -45,12 +42,12 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
-  onSubmit = async (data: RegisterFormData) => {
+  const onSubmit = async (data: RegisterFormData) => {
     try {
       await registerUser({
         ...data,
         church_id: parseInt(data.church_id),
-        is_minor: data.is_minor ?? false, // ← ensures boolean
+        is_minor: data.is_minor ?? false,
         guardian_email: data.guardian_email || undefined,
       });
       navigate("/");
@@ -58,7 +55,6 @@ export default function RegisterPage() {
       // Error handled in store
     }
   };
-
 
   return (
     <div className="card bg-white/95 backdrop-blur">

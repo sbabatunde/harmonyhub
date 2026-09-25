@@ -85,7 +85,7 @@ export const LyricsEditor: React.FC<LyricsEditorProps> = ({
     setError(null);
   };
 
-  const roundTo = (num: number, decimals: number = 2) => {
+  const roundTo = (num: number) => {
     return Math.round(num * 100) / 100;
   };
 

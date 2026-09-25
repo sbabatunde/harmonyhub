@@ -11,11 +11,11 @@ import { Spinner } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SongForm } from "@/components/songs/SongForm";
 import { useAuthStore } from "@/store/authStore";
-import { Music, Clock, Key, Trash2, Play, Eye } from "lucide-react";
+import { Clock, Key, Trash2, Play, Eye } from "lucide-react";
 import { logger } from "@/utils/logger";
 
 export default function SongsPage() {
-  const [page, setPage] = useState(1);
+  // const [page, setPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -26,8 +26,8 @@ export default function SongsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["songs", page],
-    queryFn: () => songService.getSongs(page),
+    queryKey: ["songs"],
+    queryFn: () => songService.getSongs(),
   });
 
   const deleteMutation = useMutation({

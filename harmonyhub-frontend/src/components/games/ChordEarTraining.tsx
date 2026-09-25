@@ -13,9 +13,9 @@ import {
   Trophy,
   Target,
   Flame,
-  BookOpen,
+
   RotateCcw,
-  Music,
+
   Layers,
   Sparkles,
 } from "lucide-react";
@@ -110,7 +110,7 @@ export const ChordEarTraining: React.FC = () => {
   const [playStyle, setPlayStyle] = useState<PlayStyle>("block");
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {

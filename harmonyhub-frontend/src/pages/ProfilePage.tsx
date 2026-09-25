@@ -37,9 +37,9 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || "",
-      voice_part: user?.voice_part || "",
-      vocal_range_low: user?.vocal_range_low || "",
-      vocal_range_high: user?.vocal_range_high || "",
+      voice_part: user?.voicePart || "",
+      vocal_range_low: user?.vocalRangeLow || "",
+      vocal_range_high: user?.vocalRangeHigh || "",
     },
   });
 
@@ -47,9 +47,9 @@ export default function ProfilePage() {
     if (user) {
       reset({
         name: user.name,
-        voice_part: user.voice_part || "",
-        vocal_range_low: user.vocal_range_low || "",
-        vocal_range_high: user.vocal_range_high || "",
+        voice_part: user.voicePart || "",
+        vocal_range_low: user.vocalRangeLow || "",
+        vocal_range_high: user.vocalRangeHigh || "",
       });
     }
   }, [user, reset]);
@@ -118,16 +118,16 @@ export default function ProfilePage() {
                 <Badge variant="plum" className="capitalize">
                   {user.role}
                 </Badge>
-                {user.voice_part && user.voice_part !== "unknown" && (
+                {user.voicePart && user.voicePart !== "unknown" && (
                   <Badge variant="gold" className="capitalize">
-                    {user.voice_part}
+                    {user.voicePart}
                   </Badge>
                 )}
               </div>
-              {user.church_name && (
+              {user.churchName && (
                 <p className="text-sm text-loft-plum-500 flex items-center justify-center">
                   <Church className="w-4 h-4 mr-1" />
-                  {user.church_name}
+                  {user.churchName}
                 </p>
               )}
             </div>
@@ -139,18 +139,18 @@ export default function ProfilePage() {
               <Mic2 className="w-5 h-5 mr-2 text-loft-plum-500" />
               Vocal Range
             </h3>
-            {user.vocal_range_low && user.vocal_range_high ? (
+            {user.vocalRangeLow && user.vocalRangeHigh ? (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-loft-plum-500">Lowest Note</span>
                   <span className="font-medium text-loft-plum-900">
-                    {user.vocal_range_low}
+                    {user.vocalRangeLow}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-loft-plum-500">Highest Note</span>
                   <span className="font-medium text-loft-plum-900">
-                    {user.vocal_range_high}
+                    {user.vocalRangeHigh}
                   </span>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function ProfilePage() {
                       Voice Part
                     </h3>
                     <p className="text-loft-plum-900 capitalize">
-                      {user.voice_part || "Not specified"}
+                      {user.voicePart || "Not specified"}
                     </p>
                   </div>
                   <div>
@@ -222,8 +222,8 @@ export default function ProfilePage() {
                       Vocal Range
                     </h3>
                     <p className="text-loft-plum-900">
-                      {user.vocal_range_low && user.vocal_range_high
-                        ? `${user.vocal_range_low} - ${user.vocal_range_high}`
+                      {user.vocalRangeLow && user.vocalRangeHigh
+                        ? `${user.vocalRangeLow} - ${user.vocalRangeHigh}`
                         : "Not specified"}
                     </p>
                   </div>

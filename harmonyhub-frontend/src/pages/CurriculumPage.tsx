@@ -22,9 +22,9 @@ export default function CurriculumPage() {
   const completedCount = stages.filter(
     (p: UserProgress) => p.status === "completed",
   ).length;
-  const inProgressCount = stages.filter(
-    (p: UserProgress) => p.status === "in_progress",
-  ).length;
+  // const inProgressCount = stages.filter(
+  //   (p: UserProgress) => p.status === "in_progress",
+  // ).length;
   const overallProgress = (completedCount / stages.length) * 100;
 
   const getStatusIcon = (status: string) => {

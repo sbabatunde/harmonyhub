@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -9,18 +9,11 @@ import { gameService } from "@/api/services/gameService";
 import {
   Play,
   Volume2,
-  CheckCircle,
-  XCircle,
   Trophy,
   Target,
   Flame,
-  BookOpen,
   RotateCcw,
   Mic,
-  MicOff,
-  TrendingUp,
-  Music,
-  Lock,
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
@@ -34,20 +27,20 @@ interface TargetNote {
 type GamePhase = "instructions" | "playing" | "gameover";
 
 // ----------------------------------------------------------- Note data
-const NOTE_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
+// const NOTE_NAMES = [
+//   "C",
+//   "C#",
+//   "D",
+//   "D#",
+//   "E",
+//   "F",
+//   "F#",
+//   "G",
+//   "G#",
+//   "A",
+//   "A#",
+//   "B",
+// ];
 
 // Notes available per difficulty. Frequencies for octave 4 (and 5 for higher).
 const NOTE_POOLS: Record<1 | 2 | 3, TargetNote[]> = {
@@ -97,14 +90,14 @@ export const PitchPerfectGame: React.FC = () => {
   const [bestStreak, setBestStreak] = useState(0);
   const [round, setRound] = useState(1);
   const [correctCount, setCorrectCount] = useState(0);
-  const [showTargetTone, setShowTargetTone] = useState(false);
+  // const [showTargetTone, setShowTargetTone] = useState(false);
   const [liveAccuracy, setLiveAccuracy] = useState(0);
   const [holdProgress, setHoldProgress] = useState(0);
 
   const holdStartRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
-  const holdAnimRef = useRef<number>();
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const holdAnimRef = useRef<number | null>(null);
 
   const {
     pitch,
@@ -157,14 +150,12 @@ export const PitchPerfectGame: React.FC = () => {
       const picked = pool[Math.floor(Math.random() * pool.length)];
 
       setTarget(picked);
-      setShowTargetTone(false);
       setHoldProgress(0);
       holdStartRef.current = null;
 
       // Auto-play the target note after a short delay
       setTimeout(() => {
         playTone(picked.frequency);
-        setShowTargetTone(true);
       }, 500);
     },
     [playTone],
@@ -573,7 +564,7 @@ export const PitchPerfectGame: React.FC = () => {
             {holdProgress > 0 ? "Hold it..." : "Match the pitch to score"}
           </span>
           <span className="text-xs text-loft-plum-400">
-            {Math.round(holdProgress)}%
+            {Math.round(liveAccuracy)}%
           </span>
         </div>
         <ProgressBar

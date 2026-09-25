@@ -14,9 +14,9 @@ import {
   Target,
   Flame,
   BookOpen,
-  ArrowRight,
+
   RotateCcw,
-  TrendingUp,
+
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
@@ -137,7 +137,7 @@ export const IntervalTrainer: React.FC = () => {
   const [hasPlayedCurrent, setHasPlayedCurrent] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {

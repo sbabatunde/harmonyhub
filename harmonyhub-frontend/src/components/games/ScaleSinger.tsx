@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -10,15 +10,9 @@ import {
   Play,
   Volume2,
   CheckCircle,
-  XCircle,
   Trophy,
   Target,
-  Flame,
-  BookOpen,
   RotateCcw,
-  Mic,
-  TrendingUp,
-  Music,
   Waves,
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
@@ -77,7 +71,7 @@ export const ScaleSinger: React.FC = () => {
 
   const holdStartRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTransitioningRef = useRef(false);
 
   const {
@@ -124,24 +118,24 @@ export const ScaleSinger: React.FC = () => {
     [getAudioContext],
   );
 
-  const playWholeScale = useCallback(() => {
-    scale.forEach((note, i) => {
-      const ctx = getAudioContext();
-      const t = ctx.currentTime + 0.05 + i * 0.5;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.value = note.frequency;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
-      gain.gain.setValueAtTime(0.3, t + 0.4);
-      gain.gain.linearRampToValueAtTime(0, t + 0.45);
-      osc.start(t);
-      osc.stop(t + 0.45);
-    });
-  }, [scale, getAudioContext]);
+  // const playWholeScale = useCallback(() => {
+  //   scale.forEach((note, i) => {
+  //     const ctx = getAudioContext();
+  //     const t = ctx.currentTime + 0.05 + i * 0.5;
+  //     const osc = ctx.createOscillator();
+  //     const gain = ctx.createGain();
+  //     osc.connect(gain);
+  //     gain.connect(ctx.destination);
+  //     osc.type = "sine";
+  //     osc.frequency.value = note.frequency;
+  //     gain.gain.setValueAtTime(0, t);
+  //     gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+  //     gain.gain.setValueAtTime(0.3, t + 0.4);
+  //     gain.gain.linearRampToValueAtTime(0, t + 0.45);
+  //     osc.start(t);
+  //     osc.stop(t + 0.45);
+  //   });
+  // }, [scale, getAudioContext]);
 
   // --------------------------------------------------------- Game flow
   const startGame = async () => {
@@ -626,7 +620,7 @@ export const ScaleSinger: React.FC = () => {
             {holdProgress > 0 ? "Hold it..." : "Match the pitch to advance"}
           </span>
           <span className="text-xs text-loft-plum-400">
-            {Math.round(holdProgress)}%
+            {Math.round(liveAccuracy)}%
           </span>
         </div>
         <ProgressBar

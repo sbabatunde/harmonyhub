@@ -2,13 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   karaokeService,
-  KaraokeTrack,
-  LyricLine,
+  // KaraokeTrack,
+  // LyricLine,
 } from "@/api/services/karaokeService";
 import { songService } from "@/api/services/songService";
 import { AudioPlayer } from "@/components/practice/AudioPlayer";
 import { LyricsEditor } from "@/components/karaoke/LyricsEditor";
-import { Card } from "@/components/ui/Card";
+
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -22,7 +22,7 @@ interface KaraokePlayerProps {
 export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ songId }) => {
   const [isLyricsEditorOpen, setIsLyricsEditorOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [songDuration, setSongDuration] = useState(300);
+  const [songDuration] = useState(300);
 
   const { data: karaokeTrack, isLoading } = useQuery({
     queryKey: ["karaoke-track", songId],

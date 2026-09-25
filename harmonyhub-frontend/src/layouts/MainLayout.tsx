@@ -12,7 +12,7 @@ import {
   Menu,
   X,
   User,
-  Users,
+
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 import { GuideLauncher } from "@/components/guide/GuideLauncher";

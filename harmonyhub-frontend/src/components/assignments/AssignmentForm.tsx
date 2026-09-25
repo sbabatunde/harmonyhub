@@ -9,7 +9,6 @@ import { teacherService, Student } from "@/api/services/teacherService";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/Spinner";
 
@@ -90,7 +89,7 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
       student.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const songs = songsData?.data || [];
+  const songs = Array.isArray(songsData) ? songsData : [];
 
   return (
     <Modal
@@ -205,7 +204,12 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
               {watch("due_date") && (
                 <p>
                   <span className="font-medium">Due:</span>{" "}
-                  {new Date(watch("due_date")).toLocaleDateString()}
+                  {watch("due_date") && (
+                    <p>
+                      <span className="font-medium">Due:</span>{" "}
+                      {new Date(watch("due_date")!).toLocaleDateString()}
+                    </p>
+                  )}
                 </p>
               )}
             </div>

@@ -22,21 +22,21 @@ import {
   FolderTree,
   FolderOpen,
   Workflow,
-  Lightbulb,
+
   Star,
   Users,
   BarChart3,
-  Shield,
-  Zap,
-  Heart,
-  TrendingUp,
-  Award,
-  Settings,
-  Wifi,
-  Lock,
-  Database,
-  Boxes,
-  Layers,
+
+
+
+
+
+
+
+
+
+
+
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";

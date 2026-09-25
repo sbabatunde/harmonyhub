@@ -5,7 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
-  Music,
+
   Mic,
   Play,
   ListMusic,

@@ -1,6 +1,5 @@
-import apiClient from '../client';
-import { API_ENDPOINTS } from '../endpoints';
-import { ApiResponse } from '@/types';
+import apiClient from "../client";
+import { ApiResponse } from "@/types";
 
 export interface Student {
   id: number;
@@ -25,27 +24,36 @@ export interface TeacherStats {
 
 export const teacherService = {
   async getStudents(): Promise<Student[]> {
-    const response = await apiClient.get<ApiResponse<Student[]>>('/teacher/students');
+    const response =
+      await apiClient.get<ApiResponse<Student[]>>("/teacher/students");
     return response.data;
   },
 
   async getStudentDetails(studentId: number): Promise<Student> {
-    const response = await apiClient.get<ApiResponse<Student>>(`/teacher/students/${studentId}`);
+    const response = await apiClient.get<ApiResponse<Student>>(
+      `/teacher/students/${studentId}`,
+    );
     return response.data;
   },
 
   async getStatistics(): Promise<TeacherStats> {
-    const response = await apiClient.get<ApiResponse<TeacherStats>>('/teacher/statistics');
+    const response = await apiClient.get<ApiResponse<TeacherStats>>(
+      "/teacher/statistics",
+    );
     return response.data;
   },
 
   async getStudentProgress(studentId: number): Promise<any> {
-    const response = await apiClient.get(`/teacher/students/${studentId}/progress`);
+    const response = await apiClient.get<ApiResponse<Student>>(
+      `/teacher/students/${studentId}/progress`,
+    );
     return response.data;
   },
 
   async getStudentAssignments(studentId: number): Promise<any> {
-    const response = await apiClient.get(`/teacher/students/${studentId}/assignments`);
+    const response = await apiClient.get<ApiResponse<Student>>(
+      `/teacher/students/${studentId}/assignments`,
+    );
     return response.data;
   },
 };

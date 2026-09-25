@@ -64,22 +64,22 @@ export default function AssignmentsPage() {
                   <h3 className="font-display text-lg text-loft-plum-900">
                     {assignment.song?.title || "Song"}
                   </h3>
-                  {assignment.completed_at ? (
+                  {assignment.completedAt ? (
                     <Badge variant="sage">Completed</Badge>
                   ) : (
                     <Badge variant="gold">Pending</Badge>
                   )}
                 </div>
                 <div className="flex items-center space-x-4 mt-1 text-sm text-loft-plum-500">
-                  {assignment.due_date && (
-                    <span>Due: {formatDate(assignment.due_date)}</span>
+                  {assignment.dueDate && (
+                    <span>Due: {formatDate(assignment.dueDate)}</span>
                   )}
                   {isTeacher && assignment.student && (
                     <span>Student: {assignment.student.name}</span>
                   )}
                 </div>
               </div>
-              {!isTeacher && !assignment.completed_at && (
+              {!isTeacher && !assignment.completedAt && (
                 <Button
                   variant="sage"
                   size="sm"

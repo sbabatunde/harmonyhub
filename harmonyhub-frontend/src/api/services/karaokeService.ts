@@ -1,6 +1,5 @@
 import apiClient from '../client';
 import { ApiResponse } from '@/types';
-import { logger } from '@/utils/logger';
 
 export interface LyricLine {
   start: number;

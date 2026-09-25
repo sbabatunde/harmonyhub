@@ -11,14 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { AssignmentForm } from "@/components/assignments/AssignmentForm";
 import { StudentProgressModal } from "@/components/teacher/StudentProgressModal";
-import {
-  Users,
-  ClipboardList,
-  TrendingUp,
-  Mic2,
-  BookOpen,
-  Gamepad2,
-} from "lucide-react";
+import { Users, ClipboardList, TrendingUp, Mic2, BookOpen } from "lucide-react";
 
 export default function TeacherDashboard() {
   const { user } = useAuthStore();
