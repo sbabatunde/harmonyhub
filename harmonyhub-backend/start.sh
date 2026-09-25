@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 
-# Cache configuration and routes for production speed
+# Clear and cache configurations
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Run database migrations
+# Run database migrations against Supabase
 php artisan migrate --force
 
-# Start the Laravel application server
+# Seed the database (runs only once or safely if using firstOrCreate)
+php artisan db:seed --force
+
+# Start application server
 php artisan serve --host=0.0.0.0 --port=8000
