@@ -51,16 +51,22 @@ function App() {
   const { user, fetchUser } = useAuthStore();
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // useEffect(() => {
+  //   const init = async () => {
+  //     logger.info("App initializing...");
+  //     // fetchUser will set user if session exists, null if not
+  //     await fetchUser();
+  //     setIsInitialized(true);
+  //   };
+
+  //   init();
+  // }, []);
+
   useEffect(() => {
     const init = async () => {
-      logger.info("App initializing...");
-
-      // fetchUser will set user if session exists, null if not
-      await fetchUser();
-
+      await useAuthStore.getState().fetchUser();
       setIsInitialized(true);
     };
-
     init();
   }, []);
 
