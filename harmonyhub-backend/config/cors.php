@@ -16,7 +16,7 @@ return [
     */
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['http://localhost:3000', 'https://*.vercel.app'], // Match React URL exactly
+    'allowed_origins' => ['http://localhost:3000',    'https://harmonyhub-2qbc-8zhyqnxwx-salawu-babatundes-projects.vercel.app'], // Match React URL exactly
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
