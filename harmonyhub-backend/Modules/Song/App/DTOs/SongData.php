@@ -2,8 +2,9 @@
 
 namespace Modules\Song\App\DTOs;
 
-use Spatie\LaravelData\Data;
 use App\Models\Song;
+use Illuminate\Support\Facades\Storage;
+use Spatie\LaravelData\Data;
 
 class SongData extends Data
 {
@@ -32,7 +33,8 @@ class SongData extends Data
       keySignature: $song->key_signature,  // camelCase
       tempo: $song->tempo,
       difficultyLevel: $song->difficulty_level,  // camelCase
-      audioFilePath: $song->audio_file_path,  // camelCase
+      audioFilePath: $song->audio_file_path   ? Storage::disk(config('filesystems.default'))->url($song->audio_file_path)
+        : null,
       sheetMusicPath: $song->sheet_music_path,  // camelCase
       isPublicDomain: (bool) $song->is_public_domain,  // camelCase
       licensingInfo: $song->licensing_info,

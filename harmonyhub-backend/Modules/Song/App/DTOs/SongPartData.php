@@ -2,9 +2,10 @@
 
 namespace Modules\Song\App\DTOs;
 
-use Spatie\LaravelData\Data;
-use App\Models\SongPart;
 use App\Enums\SongPartType;
+use App\Models\SongPart;
+use Illuminate\Support\Facades\Storage;
+use Spatie\LaravelData\Data;
 
 class SongPartData extends Data
 {
@@ -25,7 +26,8 @@ class SongPartData extends Data
       partType: $part->part_type instanceof SongPartType
         ? $part->part_type->value
         : $part->part_type,
-      audioFilePath: $part->audio_file_path,
+      audioFilePath: $part->audio_file_path   ? Storage::disk(config('filesystems.default'))->url($part->audio_file_path)
+        : null,
       sheetMusicPath: $part->sheet_music_path,
       midiFilePath: $part->midi_file_path,
     );

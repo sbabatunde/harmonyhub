@@ -1,15 +1,15 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -22,33 +22,18 @@ export function formatDuration(minutes: number): string {
 
 export function getInitials(name: string): string {
   return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
     .toUpperCase();
 }
 
 export const resolveAudioUrl = (src: string): string => {
-  if (!src) return '';
-  
+  if (!src) return "";
   // Already a full URL
-  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:')) {
+  if (src.startsWith("http://") || src.startsWith("https://")) {
     return src;
   }
-  
-  // Laravel storage path
-  if (src.startsWith('storage/')) {
-    return `http://localhost:8000/${src}`;
-  }
-  
-  if (src.startsWith('/storage/')) {
-    return `http://localhost:8000${src}`;
-  }
-  
-  if (src.startsWith('/')) {
-    return `http://localhost:8000${src}`;
-  }
-  
-  // Default - assume it's a Laravel storage path
+  // Fallback for local development with relative paths
   return `http://localhost:8000/storage/${src}`;
 };
