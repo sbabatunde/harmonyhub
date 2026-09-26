@@ -48,7 +48,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { user, fetchUser } = useAuthStore();
+  const { user } = useAuthStore();
   const [isInitialized, setIsInitialized] = useState(false);
 
   // useEffect(() => {
