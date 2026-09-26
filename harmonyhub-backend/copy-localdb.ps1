@@ -1,0 +1,1 @@
+php artisan db-portable:copy --from=sqlite --to=supabase
