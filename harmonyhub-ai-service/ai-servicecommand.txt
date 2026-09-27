@@ -1,0 +1,7 @@
+# Start FastAPI first
+cd "C:\xammp\htdocs\HarmonyHub Project\harmonyhub-ai-service"
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8001
+
+# In another terminal, start the quick tunnel
+cloudflared tunnel --url http://localhost:8001

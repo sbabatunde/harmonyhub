@@ -13,6 +13,7 @@
         "laravel/framework": "^13.17",
         "laravel/sanctum": "*",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "3.0",
         "lorisleiva/laravel-actions": "*",
         "nwidart/laravel-modules": "*",
         "spatie/laravel-data": "*",
