@@ -3,6 +3,7 @@
 namespace Modules\Song\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
 use Modules\Song\App\DTOs\CreateSongData;
 
 class CreateSongRequest extends FormRequest
@@ -23,6 +24,25 @@ class CreateSongRequest extends FormRequest
         ),
       ]);
     }
+  }
+
+  protected function failedValidation(Validator $validator)
+  {
+    $audioError = $this->file('audio_file')?->getError();
+    if ($audioError && $audioError !== UPLOAD_ERR_OK) {
+      $messages = [
+        UPLOAD_ERR_INI_SIZE   => 'File exceeds upload_max_filesize.',
+        UPLOAD_ERR_FORM_SIZE  => 'File exceeds MAX_FILE_SIZE in HTML form.',
+        UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
+        UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
+        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+        UPLOAD_ERR_EXTENSION  => 'A PHP extension stopped the upload.',
+      ];
+      $validator->errors()->add('audio_file', $messages[$audioError] ?? 'Unknown upload error.');
+    }
+
+    throw new ValidationException($validator);
   }
 
   public function rules(): array

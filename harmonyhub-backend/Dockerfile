@@ -16,8 +16,19 @@ COPY . .
 # Install dependencies and optimize autoloader
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# --- Upload configuration ---
+# Copy custom PHP upload settings
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
+# Create writable upload and storage directories, then set ownership
+RUN mkdir -p /var/www/html/storage/app/upload-tmp \
+    && mkdir -p /var/www/html/storage/app/public \
+    && mkdir -p /var/www/html/storage/framework/cache \
+    && mkdir -p /var/www/html/storage/framework/sessions \
+    && mkdir -p /var/www/html/storage/framework/views \
+    && mkdir -p /var/www/html/storage/logs \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Copy entrypoint script
 COPY start.sh /start.sh

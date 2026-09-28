@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -e
 
-# Wait for Supabase to be reachable (optional but recommended)
-echo "==== Starting Harmonyhub Backend ======="
-echo "Running Migration"
+echo "===== Starting HarmonyHub Backend ====="
 
-# Clear and cache configurations
-# php artisan config:cache
-# php artisan route:cache
-# php artisan view:cache
+# Ensure runtime directories exist and are writable (defensive; Dockerfile also does this)
+mkdir -p storage/app/upload-tmp
+mkdir -p storage/app/public
+mkdir -p storage/framework/cache
+mkdir -p storage/framework/sessions
+mkdir -p storage/framework/views
+mkdir -p storage/logs
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Run database migrations against Supabase (only new ones run)
+echo "Running migrations..."
 php artisan migrate --force
 
-# Start application server
+echo "Starting server on 0.0.0.0:8000..."
 php artisan serve --host=0.0.0.0 --port=8000
