@@ -2,8 +2,9 @@
 
 namespace Modules\Song\App\Requests;
 
+use Illuminate\Contracts\Validation\Validator;          // ← THIS ONE
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException;          // ← AND THIS ONE
 use Modules\Song\App\DTOs\CreateSongData;
 
 class CreateSongRequest extends FormRequest
@@ -26,25 +27,6 @@ class CreateSongRequest extends FormRequest
     }
   }
 
-  protected function failedValidation(Validator $validator)
-  {
-    $audioError = $this->file('audio_file')?->getError();
-    if ($audioError && $audioError !== UPLOAD_ERR_OK) {
-      $messages = [
-        UPLOAD_ERR_INI_SIZE   => 'File exceeds upload_max_filesize.',
-        UPLOAD_ERR_FORM_SIZE  => 'File exceeds MAX_FILE_SIZE in HTML form.',
-        UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
-        UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
-        UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
-        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
-        UPLOAD_ERR_EXTENSION  => 'A PHP extension stopped the upload.',
-      ];
-      $validator->errors()->add('audio_file', $messages[$audioError] ?? 'Unknown upload error.');
-    }
-
-    throw new ValidationException($validator);
-  }
-
   public function rules(): array
   {
     return [
@@ -55,9 +37,36 @@ class CreateSongRequest extends FormRequest
       'difficulty_level' => ['nullable', 'integer', 'min:1', 'max:10'],
       'is_public_domain' => ['nullable', 'boolean'],
       'licensing_info' => ['nullable', 'string'],
-      'audio_file' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:50000'],
+      'audio_file' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:100000'],
       'sheet_music' => ['nullable', 'file', 'mimes:pdf', 'max:20000'],
     ];
+  }
+
+  protected function failedValidation(Validator $validator): void
+  {
+    // ← Validator here now resolves to Illuminate\Contracts\Validation\Validator
+    //   because of the "use" statement at the top
+
+    if ($this->hasFile('audio_file')) {
+      $file = $this->file('audio_file');
+      if ($file && !$file->isValid()) {
+        $messages = [
+          UPLOAD_ERR_INI_SIZE   => 'File exceeds upload_max_filesize.',
+          UPLOAD_ERR_FORM_SIZE  => 'File exceeds form size limit.',
+          UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
+          UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
+          UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload folder.',
+          UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+          UPLOAD_ERR_EXTENSION  => 'A PHP extension stopped the upload.',
+        ];
+        $validator->errors()->add(
+          'audio_file',
+          $messages[$file->getError()] ?? 'Unknown upload error: ' . $file->getError()
+        );
+      }
+    }
+
+    throw new ValidationException($validator);
   }
 
   public function toDTO(): CreateSongData
