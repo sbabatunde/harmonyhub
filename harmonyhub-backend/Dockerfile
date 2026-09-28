@@ -16,6 +16,11 @@ COPY . .
 # Install dependencies and optimize autoloader
 RUN composer install --no-dev --optimize-autoloader
 
+# Remove any stale config cache committed from local dev
+RUN php artisan config:clear || true \
+    && php artisan route:clear || true \
+    && php artisan view:clear || true
+
 # --- Upload configuration ---
 # Copy custom PHP upload settings
 COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
