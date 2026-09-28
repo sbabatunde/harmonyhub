@@ -7,6 +7,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// routes/web.php
+Route::get('/login', fn() => response()->json(['message' => 'Unauthenticated.'], 401))
+    ->name('login');
 
 // routes/web.php or routes/api.php (temporary)
 Route::get('/debug-disk', function () {
