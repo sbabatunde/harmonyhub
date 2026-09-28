@@ -2,12 +2,13 @@
 
 namespace Modules\Karaoke\App\Services;
 
-use App\Models\Song;
-use App\Models\KaraokeTrack;
 use App\Enums\KaraokeStatus;
-use Modules\Karaoke\App\Services\Contracts\KaraokeServiceInterface;
+use App\Models\KaraokeTrack;
+use App\Models\Song;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Modules\Karaoke\App\Services\Contracts\KaraokeServiceInterface;
 
 class KaraokeService implements KaraokeServiceInterface
 {
@@ -52,7 +53,7 @@ class KaraokeService implements KaraokeServiceInterface
       }
 
       $webhookUrl = url('/api/karaoke/webhook');
-      $audioUrl = asset('storage/' . $song->audio_file_path);
+      $audioUrl = Storage::disk(config('filesystems.default'))->url($song->audio_file_path);
 
       Log::info('Requesting karaoke processing', [
         'song_id' => $song->id,
@@ -130,35 +131,35 @@ class KaraokeService implements KaraokeServiceInterface
       ->first();
   }
 
-public function handleWebhook(array $data): void
-{
+  public function handleWebhook(array $data): void
+  {
     $karaokeTrack = KaraokeTrack::where('song_id', $data['song_id'] ?? 0)->first();
 
     if (!$karaokeTrack) {
-        return;
+      return;
     }
 
     $karaokeTrack->update([
-        'instrumental_file_path' => $data['instrumental_path'] ?? null,
-        'vocal_file_path'        => $data['vocal_path'] ?? null,
-        'lyrics_data'            => $data['lyrics'] ?? null,
-        'status'                 => $data['status'] ?? 'failed',
-        'error_message'          => $data['error'] ?? null,
+      'instrumental_file_path' => $data['instrumental_path'] ?? null,
+      'vocal_file_path'        => $data['vocal_path'] ?? null,
+      'lyrics_data'            => $data['lyrics'] ?? null,
+      'status'                 => $data['status'] ?? 'failed',
+      'error_message'          => $data['error'] ?? null,
     ]);
 
     // Persist AI-generated voice parts onto the Song
     if (!empty($data['parts']) && is_array($data['parts'])) {
-        foreach ($data['parts'] as $partType => $filePath) {
-            \App\Models\SongPart::updateOrCreate(
-                [
-                    'song_id'   => $karaokeTrack->song_id,
-                    'part_type' => $partType,
-                ],
-                [
-                    'audio_file_path' => $filePath,
-                ]
-            );
-        }
+      foreach ($data['parts'] as $partType => $filePath) {
+        \App\Models\SongPart::updateOrCreate(
+          [
+            'song_id'   => $karaokeTrack->song_id,
+            'part_type' => $partType,
+          ],
+          [
+            'audio_file_path' => $filePath,
+          ]
+        );
+      }
     }
-}
+  }
 }
