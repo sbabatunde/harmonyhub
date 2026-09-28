@@ -13,6 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust all proxies (safe on Render, which terminates SSL at its edge)
+        $middleware->trustProxies(at: '*');
+
+        $middleware->redirectGuestsTo(
+            fn($request) =>
+            $request->is('api/*') || $request->expectsJson()
+                ? null
+                : route('login')
+        );
+
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
