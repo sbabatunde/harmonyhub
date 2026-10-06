@@ -30,13 +30,13 @@ export function getInitials(name: string): string {
 
 export const resolveAudioUrl = (src: string): string => {
   if (!src) return "";
-
-  // Already a full URL (R2, external, blob, data) — return as-is
   if (/^(https?:|blob:|data:)/i.test(src)) return src;
 
-  // Relative path fallback for local dev — use the configured API origin
-  const base =
-    import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ??
-    "http://localhost:8000";
-  return `${base}/storage/${src.replace(/^\/+/, "")}`;
+  // src from the backend is a relative path like "ai-processed/song_9_instrumental.wav"
+  const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+  const base = apiUrl
+    ? apiUrl.replace(/\/api\/?$/, "")
+    : "http://localhost:8000";
+  const cleaned = src.replace(/^\/+/, "").replace(/^storage\//, "");
+  return `${base}/storage/${cleaned}`;
 };

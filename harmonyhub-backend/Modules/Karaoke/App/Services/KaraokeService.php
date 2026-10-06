@@ -139,15 +139,21 @@ class KaraokeService implements KaraokeServiceInterface
       return;
     }
 
+    // Strip "storage/" prefix so paths are stored as relative keys,
+    // e.g. "ai-processed/song_9_instrumental.wav"
+    $strip = function (?string $path): ?string {
+      if (!$path) return null;
+      return ltrim(preg_replace('#^/?storage/#', '', $path), '/');
+    };
+
     $karaokeTrack->update([
-      'instrumental_file_path' => $data['instrumental_path'] ?? null,
-      'vocal_file_path'        => $data['vocal_path'] ?? null,
+      'instrumental_file_path' => $strip($data['instrumental_path'] ?? null),
+      'vocal_file_path'        => $strip($data['vocal_path'] ?? null),
       'lyrics_data'            => $data['lyrics'] ?? null,
       'status'                 => $data['status'] ?? 'failed',
       'error_message'          => $data['error'] ?? null,
     ]);
 
-    // Persist AI-generated voice parts onto the Song
     if (!empty($data['parts']) && is_array($data['parts'])) {
       foreach ($data['parts'] as $partType => $filePath) {
         \App\Models\SongPart::updateOrCreate(
@@ -156,7 +162,7 @@ class KaraokeService implements KaraokeServiceInterface
             'part_type' => $partType,
           ],
           [
-            'audio_file_path' => $filePath,
+            'audio_file_path' => $strip($filePath),
           ]
         );
       }

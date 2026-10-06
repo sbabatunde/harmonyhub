@@ -29,6 +29,11 @@ class Settings:
 
     LARAVEL_API_URL: str = os.getenv("LARAVEL_API_URL", "http://localhost:8000/api")
     LARAVEL_WEBHOOK_SECRET: str = os.getenv("LARAVEL_WEBHOOK_SECRET", "")
+     # R2 (optional — leave blank for local-only mode)
+    R2_ENDPOINT: str = os.getenv("R2_ENDPOINT", "")
+    R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
+    R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
+    R2_BUCKET: str = os.getenv("R2_BUCKET", "")
 
     def ensure_directories(self):
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -38,3 +43,5 @@ class Settings:
 
 settings = Settings()
 settings.ensure_directories()
+
+    

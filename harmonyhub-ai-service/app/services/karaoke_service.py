@@ -18,6 +18,8 @@ from app.models.schemas import (
     LyricsSegment,
     KaraokeRequest,
 )
+import boto3
+from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,17 @@ class KaraokeService:
     def __init__(self):
         self.audio_processor = AudioProcessor()
         self._whisper_model = None
+        # True when R2 credentials are present — production path
+        self._use_r2 = bool(
+            getattr(settings, "R2_ENDPOINT", None)
+            and getattr(settings, "R2_ACCESS_KEY_ID", None)
+            and getattr(settings, "R2_SECRET_ACCESS_KEY", None)
+            and getattr(settings, "R2_BUCKET", None)
+        )
+        if self._use_r2:
+            log("R2 upload enabled — production mode")
+        else:
+            log("R2 not configured — local disk mode")
 
     # ------------------------------------------------------------------ Whisper
     def _get_whisper_model(self):
@@ -47,49 +60,42 @@ class KaraokeService:
         log(f"=== Starting karaoke processing for song {request.song_id} ===")
 
         try:
-            # 1) Download
             log(f"Step 1: Downloading audio from {request.audio_url}")
             audio_path = await self._download_audio(
                 request.audio_url, request.song_id
             )
             log("Step 1 complete")
 
-            # 2) Demucs split
             log("Step 2: Demucs vocal/instrumental separation...")
             instrumental_path, vocal_path = await self._separate_audio(
                 audio_path, request.song_id
             )
             log("Step 2 complete")
 
-            # 3) Copy instrumental + vocals to Laravel
-            log("Step 2.5: Copying stems to Laravel storage...")
-            instrumental_url, vocal_url = await self._copy_to_laravel(
+            log("Step 2.5: Publishing stems...")
+            instrumental_key, vocal_key = await self._publish_stems(
                 instrumental_path, vocal_path, request.song_id
             )
             log("Step 2.5 complete")
 
-            # 4) Generate 4 voice parts
             log("Step 2.6: Generating voice parts...")
             parts = await self._generate_parts(vocal_path, request.song_id)
             log(f"Step 2.6 complete: {len(parts)} parts")
 
-            # 5) Transcribe lyrics
             log("Step 3: Whisper transcription...")
             lyrics = await self._transcribe_lyrics(vocal_path, request.language)
             log(f"Step 3 complete: {len(lyrics)} lyric segments")
 
-            # 6) Build result
             result = KaraokeResult(
                 song_id=request.song_id,
                 status=KaraokeStatus.READY,
-                instrumental_path=instrumental_url,
-                vocal_path=vocal_url,
+                instrumental_path=instrumental_key,
+                vocal_path=vocal_key,
                 lyrics=lyrics,
                 parts=parts,
                 processed_at=datetime.now(),
             )
 
-            # 7) Webhook
             if request.callback_url:
                 log("Step 5: Sending webhook to Laravel")
                 await self._send_webhook(request.callback_url, result)
@@ -183,10 +189,15 @@ class KaraokeService:
 
         return str(instrumental_path), str(vocal_path)
 
-    # ------------------------------------------------------------------ Copy
-    async def _copy_to_laravel(
+    # ------------------------------------------------------------------ Stems
+    async def _publish_stems(
         self, instrumental_path: str, vocal_path: str, song_id: int
     ) -> Tuple[str, str]:
+        """
+        Copy stems to Laravel's local disk AND, if configured, upload to R2.
+        Returns relative keys (e.g. 'ai-processed/song_9_instrumental.wav')
+        that both environments can resolve.
+        """
         laravel_dir = settings.LARAVEL_STORAGE_PATH / "ai-processed"
         laravel_dir.mkdir(parents=True, exist_ok=True)
 
@@ -199,10 +210,18 @@ class KaraokeService:
         log(f"Copied instrumental -> {instrumental_dst}")
         log(f"Copied vocals       -> {vocal_dst}")
 
-        return (
-            f"storage/ai-processed/song_{song_id}_instrumental.wav",
-            f"storage/ai-processed/song_{song_id}_vocals.wav",
-        )
+        inst_key = f"ai-processed/song_{song_id}_instrumental.wav"
+        voc_key = f"ai-processed/song_{song_id}_vocals.wav"
+
+        if self._use_r2:
+            log(f"Uploading {inst_key} to R2...")
+            self._upload_to_r2(str(instrumental_dst), inst_key)
+            log(f"Uploading {voc_key} to R2...")
+            self._upload_to_r2(str(vocal_dst), voc_key)
+        else:
+            log("Skipping R2 upload (local mode)")
+
+        return inst_key, voc_key
 
     # ------------------------------------------------------------------ Parts
     async def _generate_parts(
@@ -211,8 +230,6 @@ class KaraokeService:
         log(f"Generating voice parts for song {song_id}...")
 
         parts_script = settings.BASE_DIR / "app" / "generate_parts.py"
-
-        # Generate inside AI storage first
         parts_dir = settings.PROCESSED_DIR / str(song_id) / "parts"
         parts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -230,7 +247,7 @@ class KaraokeService:
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=900,   # 15 minutes for 4 parts
+                    timeout=900,
                 ),
                 timeout=960,
             )
@@ -245,7 +262,6 @@ class KaraokeService:
             log(f"Parts generation failed (non-fatal): {result.stderr[-500:]}")
             return {}
 
-        # Copy generated parts to Laravel so the frontend can stream them
         laravel_parts_dir = settings.LARAVEL_STORAGE_PATH / "ai-processed" / "parts"
         laravel_parts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -259,9 +275,16 @@ class KaraokeService:
             dst = laravel_parts_dir / f"song_{song_id}_{part_name}.wav"
             shutil.copy2(src, dst)
 
-            url = f"storage/ai-processed/parts/song_{song_id}_{part_name}.wav"
-            parts[part_name] = url
-            log(f"Part ready: {part_name} -> {url}")
+            key = f"ai-processed/parts/song_{song_id}_{part_name}.wav"
+
+            if self._use_r2:
+                log(f"Uploading {key} to R2...")
+                self._upload_to_r2(str(dst), key)
+            else:
+                log(f"Local only: {key}")
+
+            parts[part_name] = key
+            log(f"Part ready: {part_name} -> {key}")
 
         return parts
 
@@ -317,3 +340,21 @@ class KaraokeService:
         except Exception as e:
             log(f"Webhook failed: {e}")
             logger.error(f"Webhook failed: {e}", exc_info=True)
+
+    # ------------------------------------------------------------------ R2
+    def _upload_to_r2(self, local_path: str, key: str) -> str:
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=settings.R2_ENDPOINT,
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            config=Config(signature_version="s3v4"),
+            region_name="auto",
+        )
+        s3.upload_file(
+            local_path,
+            settings.R2_BUCKET,
+            key,
+            ExtraArgs={"ContentType": "audio/wav"},
+        )
+        return key
