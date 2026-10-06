@@ -2,6 +2,7 @@
 
 namespace Modules\Karaoke\App\DTOs;
 
+use App\Enums\KaraokeStatus;
 use App\Models\KaraokeTrack;
 use Illuminate\Support\Facades\Storage;
 use Spatie\LaravelData\Data;
@@ -34,7 +35,9 @@ class KaraokeTrackData extends Data
         ? $disk->url($track->vocal_file_path)
         : null,
       lyricsData: $track->lyrics_data,
-      status: $track->status,
+      status: $track->status instanceof KaraokeStatus
+        ? $track->status->value
+        : (string) $track->status,
       errorMessage: $track->error_message,
       createdAt: $track->created_at?->toIso8601String(),
       updatedAt: $track->updated_at?->toIso8601String(),
