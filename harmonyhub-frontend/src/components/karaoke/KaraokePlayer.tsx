@@ -31,10 +31,10 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ songId }) => {
   });
 
   const currentLyricIndex = useMemo(() => {
-    if (!karaokeTrack?.lyrics_data || karaokeTrack.lyrics_data.length === 0) {
+    if (!karaokeTrack?.lyricsData || karaokeTrack.lyricsData.length === 0) {
       return -1;
     }
-    return karaokeTrack.lyrics_data.findIndex(
+    return karaokeTrack.lyricsData.findIndex(
       (lyric) => currentTime >= lyric.start && currentTime <= lyric.end,
     );
   }, [currentTime, karaokeTrack]);
@@ -56,15 +56,15 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ songId }) => {
         </Button>
       </div>
 
-      {karaokeTrack.instrumental_file_path && (
+      {karaokeTrack.instrumentalFilePath && (
         <AudioPlayer
-          src={karaokeTrack.instrumental_file_path}
+          src={karaokeTrack.instrumentalFilePath}
           title="Instrumental"
           onTimeUpdate={setCurrentTime}
         />
       )}
 
-      {karaokeTrack.lyrics_data && karaokeTrack.lyrics_data.length > 0 && (
+      {karaokeTrack.lyricsData && karaokeTrack.lyricsData.length > 0 && (
         <div className="relative bg-loft-plum-900 rounded-xl p-4 sm:p-6 min-h-[140px] sm:min-h-[200px] overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-loft-plum-800 to-loft-plum-900 opacity-50" />
 
@@ -86,13 +86,12 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ songId }) => {
                 {currentLyricIndex >= 0 ? (
                   <>
                     <p className="text-xl sm:text-3xl font-display text-brass-gold-400 font-bold">
-                      {karaokeTrack.lyrics_data[currentLyricIndex]?.text}
+                      {karaokeTrack.lyricsData[currentLyricIndex]?.text}
                     </p>
 
-                    {currentLyricIndex + 1 <
-                      karaokeTrack.lyrics_data.length && (
+                    {currentLyricIndex + 1 < karaokeTrack.lyricsData.length && (
                       <p className="text-sm sm:text-lg text-loft-plum-400 mt-3 opacity-70">
-                        {karaokeTrack.lyrics_data[currentLyricIndex + 1]?.text}
+                        {karaokeTrack.lyricsData[currentLyricIndex + 1]?.text}
                       </p>
                     )}
                   </>
@@ -134,7 +133,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ songId }) => {
         songId={songId}
         isOpen={isLyricsEditorOpen}
         onClose={() => setIsLyricsEditorOpen(false)}
-        currentLyrics={karaokeTrack.lyrics_data}
+        currentLyrics={karaokeTrack.lyricsData}
         songDuration={songDuration}
       />
     </div>

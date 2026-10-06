@@ -1,26 +1,29 @@
-import apiClient from '../client';
-import { ApiResponse } from '@/types';
+import apiClient from "../client";
+import { ApiResponse } from "@/types";
 
 export interface LyricLine {
   start: number;
   end: number;
   text: string;
+  confidence?: number | null;
 }
 
 export interface KaraokeTrack {
   id: number;
-  song_id: number;
-  instrumental_file_path?: string | null;
-  vocal_file_path?: string | null;
-  lyrics_data?: LyricLine[] | null;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
-  error_message?: string | null;
+  songId: number;
+  instrumentalFilePath?: string | null;
+  vocalFilePath?: string | null;
+  lyricsData?: LyricLine[] | null;
+  status: "pending" | "processing" | "ready" | "failed";
+  errorMessage?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export const karaokeService = {
   async requestProcessing(songId: number): Promise<KaraokeTrack> {
     const response = await apiClient.post<ApiResponse<KaraokeTrack>>(
-      `/songs/${songId}/karaoke/process`
+      `/songs/${songId}/karaoke/process`,
     );
     return response.data;
   },
@@ -28,9 +31,9 @@ export const karaokeService = {
   async getStatus(songId: number): Promise<KaraokeTrack | null> {
     try {
       const response = await apiClient.get<ApiResponse<KaraokeTrack>>(
-        `/songs/${songId}/karaoke/status`
+        `/songs/${songId}/karaoke/status`,
       );
-      return response.data || null;
+      return response.data ?? null;
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;
@@ -42,9 +45,9 @@ export const karaokeService = {
   async getTrack(songId: number): Promise<KaraokeTrack | null> {
     try {
       const response = await apiClient.get<ApiResponse<KaraokeTrack>>(
-        `/songs/${songId}/karaoke/track`
+        `/songs/${songId}/karaoke/track`,
       );
-      return response.data || null;
+      return response.data ?? null;
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;
@@ -56,14 +59,14 @@ export const karaokeService = {
   async updateLyrics(
     songId: number,
     lyrics: LyricLine[],
-    songDuration?: number
+    songDuration?: number,
   ): Promise<KaraokeTrack> {
     const response = await apiClient.put<ApiResponse<KaraokeTrack>>(
       `/songs/${songId}/karaoke/lyrics`,
       {
         lyrics,
         song_duration: songDuration,
-      }
+      },
     );
     return response.data;
   },

@@ -311,7 +311,7 @@ export default function SongDetailPage() {
             </Button>
             {karaokeStatus?.status === "failed" && (
               <p className="text-sm text-ember-coral-500 mt-2">
-                Previous attempt failed: {karaokeStatus.error_message}
+                Previous attempt failed: {karaokeStatus.errorMessage}
               </p>
             )}
           </div>
@@ -345,9 +345,9 @@ export default function SongDetailPage() {
           <CombinedPlayer
             parts={song.parts}
             instrumentalPath={
-              karaokeTrack?.instrumental_file_path || song.audioFilePath
+              karaokeTrack?.instrumentalFilePath || song.audioFilePath
             }
-            lyrics={karaokeTrack?.lyrics_data}
+            lyrics={karaokeTrack?.lyricsData}
             title={`${song.title} — Full Mix`}
           />
         </Card>
