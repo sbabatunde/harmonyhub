@@ -124,7 +124,7 @@ class KaraokeService:
 
         audio_path = audio_dir / f"original_{song_id}.mp3"
 
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
             with open(audio_path, "wb") as f:
@@ -304,7 +304,7 @@ class KaraokeService:
     ) -> None:
         log(f"Sending webhook to {callback_url}")
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
                 response = await client.post(
                     callback_url,
                     json=result.model_dump(mode="json"),

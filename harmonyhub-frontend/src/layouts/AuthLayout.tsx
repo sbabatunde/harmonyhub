@@ -9,9 +9,11 @@ export default function AuthLayout() {
       </div>
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-display text-brass-gold-400 mb-2">
-            HarmonyHub
-          </h1>
+          <img
+            src="/logo.png"
+            alt="HarmonyHub"
+            className="h-20 w-20 mx-auto mb-2"
+          />
           <p className="text-loft-plum-200">
             Evening rehearsals, voices in harmony
           </p>

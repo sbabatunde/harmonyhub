@@ -65,21 +65,18 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
     [parts],
   );
 
-  // Refs
   const instrumentalRef = useRef<HTMLAudioElement>(null);
   const partRefsMap = useRef<Map<string, HTMLAudioElement>>(new Map());
   const isDraggingRef = useRef(false);
   const pendingSeekRef = useRef<number | null>(null);
   const masterTrackTypeRef = useRef<string | null>(null);
 
-  // Decide which track is the "master clock"
   useEffect(() => {
     masterTrackTypeRef.current = instrumentalPath
       ? "__instrumental__"
       : (partsWithAudio[0]?.partType ?? null);
   }, [instrumentalPath, partsWithAudio]);
 
-  // Initialize per-part volumes once
   useEffect(() => {
     const vols: Record<string, number> = {};
     const muted: Record<string, boolean> = {};
@@ -91,7 +88,6 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
     setPartMuted(muted);
   }, [partsWithAudio]);
 
-  // Helper: get all audio elements (instrumental + parts)
   const getAllAudio = useCallback((): HTMLAudioElement[] => {
     const arr: HTMLAudioElement[] = [];
     if (instrumentalRef.current) arr.push(instrumentalRef.current);
@@ -102,7 +98,6 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
     return arr;
   }, [partsWithAudio]);
 
-  // Get master clock element
   const getMasterAudio = useCallback((): HTMLAudioElement | null => {
     const type = masterTrackTypeRef.current;
     if (!type) return null;
@@ -110,33 +105,37 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
     return partRefsMap.current.get(type) ?? null;
   }, []);
 
-  // Set up event listeners for all tracks
+  // Track the master's duration for the progress bar
   useEffect(() => {
-    const audios = getAllAudio();
-    const listeners: Array<{
-      audio: HTMLAudioElement;
-      handler: () => void;
-    }> = [];
+    const master = getMasterAudio();
+    if (!master) return;
 
-    audios.forEach((audio) => {
-      const handler = () => {
-        if (audio.duration > duration && isFinite(audio.duration)) {
-          setDuration(audio.duration);
-        }
-      };
-      audio.addEventListener("loadedmetadata", handler);
-      listeners.push({ audio, handler });
-      audio.load();
-    });
+    const handleLoadedMetadata = () => {
+      if (isFinite(master.duration) && master.duration > 0) {
+        setDuration(master.duration);
+      }
+    };
+
+    if (isFinite(master.duration) && master.duration > 0) {
+      setDuration(master.duration);
+    } else {
+      master.addEventListener("loadedmetadata", handleLoadedMetadata);
+    }
 
     return () => {
-      listeners.forEach(({ audio, handler }) =>
-        audio.removeEventListener("loadedmetadata", handler),
-      );
+      master.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
-  }, [getAllAudio, duration]);
+  }, [getMasterAudio, partsWithAudio, instrumentalPath]);
 
-  // Sync loop — runs while playing
+  // Only load metadata — full load happens on first play (iOS-safe)
+  useEffect(() => {
+    const audios = getAllAudio();
+    audios.forEach((audio) => {
+      audio.preload = "metadata";
+    });
+  }, [getAllAudio]);
+
+  // Sync loop — 200ms is plenty and much lighter on mobile
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -149,7 +148,6 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
       const masterTime = master.currentTime;
       setCurrentTime(masterTime);
 
-      // Drift-correct every track against the master
       getAllAudio().forEach((audio) => {
         if (audio === master) return;
         if (Math.abs(audio.currentTime - masterTime) > 0.15) {
@@ -157,17 +155,15 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
         }
       });
 
-      // End-of-track
       if (master.ended || masterTime >= master.duration - 0.1) {
         getAllAudio().forEach((a) => a.pause());
         setIsPlaying(false);
       }
-    }, 100);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [isPlaying, getMasterAudio, getAllAudio]);
 
-  // Apply volumes whenever anything changes
   useEffect(() => {
     if (instrumentalRef.current) {
       instrumentalRef.current.volume =
@@ -201,27 +197,40 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
       return;
     }
 
-    // Sync all to master's current position before starting
     const master = getMasterAudio() ?? audios[0];
     const startTime = master.currentTime;
 
+    // Play master first, then the rest. iOS grants the gesture to the
+    // first audio it sees; subsequent plays are allowed if they were
+    // queued from the same gesture.
     try {
-      await Promise.all(
-        audios.map((audio) => {
-          audio.currentTime = startTime;
-          return audio.play();
-        }),
-      );
+      audios.forEach((audio) => {
+        audio.currentTime = startTime;
+      });
+
+      await master.play();
+
+      // Attach remaining plays; some may be blocked on iOS.
+      const others = audios.filter((a) => a !== master);
+      const results = await Promise.allSettled(others.map((a) => a.play()));
+      const blocked = results.filter((r) => r.status === "rejected").length;
+
+      if (blocked > 0) {
+        setError(
+          `This device blocked ${blocked} of ${audios.length} tracks. ` +
+            `Tap Play again or use a single part.`,
+        );
+      } else {
+        setError(null);
+      }
       setIsPlaying(true);
-      setError(null);
     } catch (err) {
       console.error("Playback failed:", err);
-      setError("Failed to play audio. Try again.");
+      setError("Failed to play audio. Tap again.");
       setIsPlaying(false);
     }
   }, [isPlaying, getAllAudio, getMasterAudio]);
 
-  // Seek handling — UI updates live, audio elements updated on every change
   const handleSeekInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const time = parseFloat(e.target.value);
@@ -229,7 +238,6 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
       pendingSeekRef.current = time;
       setCurrentTime(time);
 
-      // Live update all elements so music follows the slider
       getAllAudio().forEach((audio) => {
         if (!isNaN(audio.duration)) {
           audio.currentTime = Math.min(time, audio.duration);
@@ -314,13 +322,13 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
   if (partsWithAudio.length === 0 && !instrumentalPath) return null;
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4 w-full overflow-hidden", className)}>
       {/* Hidden audio elements */}
       {instrumentalPath && (
         <audio
           ref={instrumentalRef}
           src={resolveAudioUrl(instrumentalPath)}
-          preload="auto"
+          preload="metadata"
         />
       )}
       {partsWithAudio.map((part) => (
@@ -331,17 +339,17 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
             else partRefsMap.current.delete(part.partType);
           }}
           src={resolveAudioUrl(part.audioFilePath!)}
-          preload="auto"
+          preload="metadata"
         />
       ))}
 
       {/* Title */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-loft-plum-900 flex items-center">
-          <Layers className="w-5 h-5 mr-2 text-brass-gold-500" />
-          {title || "Full Practice Mix"}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="font-display text-lg text-loft-plum-900 flex items-center min-w-0">
+          <Layers className="w-5 h-5 mr-2 text-brass-gold-500 flex-shrink-0" />
+          <span className="truncate">{title || "Full Practice Mix"}</span>
         </h3>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {instrumentalPath && (
             <Badge variant="plum">
               <Music className="w-3 h-3 mr-1" />
@@ -377,10 +385,14 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
           onTouchStart={handleSeekStart}
           onTouchEnd={handleSeekCommit}
           onKeyUp={handleSeekCommit}
-          className="w-full h-2 bg-loft-plum-100 rounded-full appearance-none cursor-pointer
+          className="w-full h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                     [&::-webkit-slider-runnable-track]:h-2
+                     [&::-webkit-slider-runnable-track]:bg-loft-plum-100
+                     [&::-webkit-slider-runnable-track]:rounded-full
                      [&::-webkit-slider-thumb]:appearance-none
-                     [&::-webkit-slider-thumb]:w-4
-                     [&::-webkit-slider-thumb]:h-4
+                     [&::-webkit-slider-thumb]:w-5
+                     [&::-webkit-slider-thumb]:h-5
+                     [&::-webkit-slider-thumb]:-mt-1.5
                      [&::-webkit-slider-thumb]:rounded-full
                      [&::-webkit-slider-thumb]:bg-loft-plum-600
                      [&::-webkit-slider-thumb]:cursor-pointer
@@ -393,8 +405,8 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
       </div>
 
       {/* Main Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <Button variant="ghost" size="sm" onClick={() => skipBackward(10)}>
             <SkipBack className="w-4 h-4" />
           </Button>
@@ -422,7 +434,7 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           <button
             onClick={toggleMute}
             className="p-2 rounded-lg hover:bg-loft-plum-100 transition-colors"
@@ -441,10 +453,14 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
             step="0.01"
             value={masterVolume}
             onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-            className="w-24 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+            className="w-20 sm:w-24 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                       [&::-webkit-slider-runnable-track]:h-1
+                       [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                       [&::-webkit-slider-runnable-track]:rounded-full
                        [&::-webkit-slider-thumb]:appearance-none
-                       [&::-webkit-slider-thumb]:w-3
-                       [&::-webkit-slider-thumb]:h-3
+                       [&::-webkit-slider-thumb]:w-5
+                       [&::-webkit-slider-thumb]:h-5
+                       [&::-webkit-slider-thumb]:-mt-2
                        [&::-webkit-slider-thumb]:rounded-full
                        [&::-webkit-slider-thumb]:bg-loft-plum-500"
             title="Master volume"
@@ -454,7 +470,7 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
 
       {/* TV-Style Lyrics */}
       {lyrics && lyrics.length > 0 && (
-        <div className="relative bg-loft-plum-900 rounded-xl p-6 min-h-[180px] overflow-hidden">
+        <div className="relative bg-loft-plum-900 rounded-xl p-4 sm:p-6 min-h-[140px] sm:min-h-[180px] overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-loft-plum-800 to-loft-plum-900 opacity-50" />
           <div className="relative z-10 flex items-center justify-center h-full">
             <AnimatePresence mode="wait">
@@ -468,21 +484,21 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
                   damping: 20,
                   stiffness: 200,
                 }}
-                className="text-center"
+                className="text-center px-2"
               >
                 {currentLyricIndex >= 0 ? (
                   <>
-                    <p className="text-3xl font-display text-brass-gold-400 font-bold">
+                    <p className="text-xl sm:text-3xl font-display text-brass-gold-400 font-bold">
                       {lyrics[currentLyricIndex]?.text}
                     </p>
                     {currentLyricIndex + 1 < lyrics.length && (
-                      <p className="text-lg text-loft-plum-400 mt-3 opacity-70">
+                      <p className="text-sm sm:text-lg text-loft-plum-400 mt-3 opacity-70">
                         {lyrics[currentLyricIndex + 1]?.text}
                       </p>
                     )}
                   </>
                 ) : (
-                  <p className="text-xl text-loft-plum-400">
+                  <p className="text-lg sm:text-xl text-loft-plum-400">
                     <Music className="w-8 h-8 mx-auto mb-2" />
                     Press Play to start
                   </p>
@@ -494,16 +510,16 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
       )}
 
       {/* Track Mixer */}
-      <div className="bg-loft-plum-50 rounded-lg p-4 space-y-3">
+      <div className="bg-loft-plum-50 rounded-lg p-3 sm:p-4 space-y-3">
         <p className="text-xs font-medium text-loft-plum-500 uppercase tracking-wide">
           Track Mixer
         </p>
 
         {instrumentalPath && (
-          <div className="flex items-center space-x-3 pb-2 border-b border-loft-plum-100">
+          <div className="flex items-center gap-2 sm:gap-3 pb-2 border-b border-loft-plum-100">
             <button
               onClick={() => setInstrumentalMuted((v) => !v)}
-              className="p-1 hover:bg-loft-plum-100 rounded"
+              className="p-1 hover:bg-loft-plum-100 rounded flex-shrink-0"
               title={instrumentalMuted ? "Unmute" : "Mute"}
             >
               {instrumentalMuted ? (
@@ -512,9 +528,9 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
                 <Volume2 className="w-4 h-4 text-loft-plum-600" />
               )}
             </button>
-            <span className="w-24 text-sm font-medium text-loft-plum-700 flex items-center">
+            <span className="w-20 sm:w-24 text-sm font-medium text-loft-plum-700 flex items-center flex-shrink-0">
               <Music className="w-3 h-3 mr-1" />
-              Instrumental
+              Inst.
             </span>
             <input
               type="range"
@@ -525,24 +541,28 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
               onChange={(e) =>
                 setInstrumentalVolume(parseFloat(e.target.value))
               }
-              className="flex-1 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+              className="flex-1 min-w-0 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                         [&::-webkit-slider-runnable-track]:h-1
+                         [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                         [&::-webkit-slider-runnable-track]:rounded-full
                          [&::-webkit-slider-thumb]:appearance-none
-                         [&::-webkit-slider-thumb]:w-3
-                         [&::-webkit-slider-thumb]:h-3
+                         [&::-webkit-slider-thumb]:w-5
+                         [&::-webkit-slider-thumb]:h-5
+                         [&::-webkit-slider-thumb]:-mt-2
                          [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-loft-plum-500"
             />
-            <span className="text-xs text-loft-plum-400 w-10 text-right">
+            <span className="text-xs text-loft-plum-400 w-10 text-right flex-shrink-0">
               {Math.round(instrumentalVolume * 100)}%
             </span>
           </div>
         )}
 
         {partsWithAudio.map((part) => (
-          <div key={part.id} className="flex items-center space-x-3">
+          <div key={part.id} className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => togglePartMute(part.partType)}
-              className="p-1 hover:bg-loft-plum-100 rounded"
+              className="p-1 hover:bg-loft-plum-100 rounded flex-shrink-0"
               title={partMuted[part.partType] ? "Unmute" : "Mute"}
             >
               {partMuted[part.partType] ? (
@@ -557,12 +577,12 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
             </button>
             <span
               className={cn(
-                "w-24 text-sm font-medium capitalize flex items-center",
+                "w-20 sm:w-24 text-sm font-medium capitalize flex items-center flex-shrink-0",
                 getPartColor(part.partType),
               )}
             >
               <Mic2 className="w-3 h-3 mr-1" />
-              {part.partType}
+              <span className="truncate">{part.partType}</span>
             </span>
             <input
               type="range"
@@ -573,14 +593,18 @@ export const CombinedPlayer: React.FC<CombinedPlayerProps> = ({
               onChange={(e) =>
                 setPartVolume(part.partType, parseFloat(e.target.value))
               }
-              className="flex-1 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+              className="flex-1 min-w-0 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                         [&::-webkit-slider-runnable-track]:h-1
+                         [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                         [&::-webkit-slider-runnable-track]:rounded-full
                          [&::-webkit-slider-thumb]:appearance-none
-                         [&::-webkit-slider-thumb]:w-3
-                         [&::-webkit-slider-thumb]:h-3
+                         [&::-webkit-slider-thumb]:w-5
+                         [&::-webkit-slider-thumb]:h-5
+                         [&::-webkit-slider-thumb]:-mt-2
                          [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-loft-plum-500"
             />
-            <span className="text-xs text-loft-plum-400 w-10 text-right">
+            <span className="text-xs text-loft-plum-400 w-10 text-right flex-shrink-0">
               {Math.round((partVolumes[part.partType] ?? 1) * 100)}%
             </span>
           </div>

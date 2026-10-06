@@ -12,7 +12,6 @@ import {
   Menu,
   X,
   User,
-
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 import { GuideLauncher } from "@/components/guide/GuideLauncher";
@@ -48,9 +47,12 @@ export default function MainLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 bg-loft-plum-900">
         <div className="flex items-center justify-center h-16 border-b border-loft-plum-800">
-          <h1 className="text-2xl font-display text-brass-gold-400">
-            HarmonyHub
-          </h1>
+          <div className="flex items-center justify-center gap-2">
+            <img src="/logo.png" alt="" className="h-8 w-8" />
+            <span className="text-xl font-display text-brass-gold-400">
+              HarmonyHub
+            </span>
+          </div>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navItems.map((item) => {

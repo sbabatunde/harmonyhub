@@ -2,8 +2,11 @@
 
 namespace Modules\Auth\App\DTOs;
 
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Data;
+use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
+#[MapInputName(SnakeCaseMapper::class)]
 class RegisterUserData extends Data
 {
   public function __construct(

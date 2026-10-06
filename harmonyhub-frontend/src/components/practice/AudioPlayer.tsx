@@ -54,27 +54,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Guards to prevent re-loading the same src
   const loadedSrcRef = useRef<string>("");
-
-  // True while user is actively dragging the seek slider.
   const isDraggingRef = useRef(false);
-  // Pending seek target — only committed on drag end.
   const pendingSeekRef = useRef<number | null>(null);
 
   const resolvedSrc = useMemo(() => {
     if (!src) return "";
-    if (
-      src.startsWith("http://") ||
-      src.startsWith("https://") ||
-      src.startsWith("blob:")
-    ) {
-      return src;
-    }
     return resolveAudioUrl(src);
   }, [src]);
 
-  // Refs mirroring state used inside audio event handlers
   const loopStateRef = useRef({ isLooping, loopStart, loopEnd });
   const onTimeUpdateRef = useRef(onTimeUpdate);
   const onEndedRef = useRef(onEnded);
@@ -91,13 +79,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     onEndedRef.current = onEnded;
   }, [onEnded]);
 
-  // Set src ONLY when it genuinely changes (guarded by loadedSrcRef)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !resolvedSrc) return;
-
-    // Hard guard: if we've already loaded this exact src, do nothing.
-    // Prevents audio.load() from resetting position to 0 on re-renders.
     if (loadedSrcRef.current === resolvedSrc) return;
 
     loadedSrcRef.current = resolvedSrc;
@@ -109,7 +93,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setError(null);
   }, [resolvedSrc]);
 
-  // Attach audio element event listeners ONCE
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -120,9 +103,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     };
 
     const handleTimeUpdate = () => {
-      // Skip while dragging so we don't fight the user's slider position
       if (isDraggingRef.current) return;
-
       const time = audio.currentTime;
       setCurrentTime(time);
       onTimeUpdateRef.current?.(time);
@@ -177,7 +158,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
-      audioRef.current.preservesPitch = true;
+      // iOS uses webkitPreservesPitch on older versions
+      const a = audioRef.current as HTMLAudioElement & {
+        webkitPreservesPitch?: boolean;
+      };
+      if ("preservesPitch" in a) a.preservesPitch = true;
+      if ("webkitPreservesPitch" in a) a.webkitPreservesPitch = true;
     }
   }, [playbackRate]);
 
@@ -195,7 +181,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, []);
 
-  // Update UI immediately while dragging; commit only on release
   const handleSeekInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const time = parseFloat(e.target.value);
@@ -266,7 +251,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
     audio.playbackRate = rate;
-    audio.preservesPitch = true;
     setPlaybackRate(rate);
   }, []);
 
@@ -307,17 +291,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   }, []);
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <audio ref={audioRef} preload="auto" />
+    <div className={cn("space-y-4 w-full overflow-hidden", className)}>
+      <audio ref={audioRef} preload="metadata" />
 
       {/* Title and Status */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         {title && (
-          <h3 className="font-display text-lg text-loft-plum-900 truncate">
+          <h3 className="font-display text-lg text-loft-plum-900 truncate min-w-0">
             {title}
           </h3>
         )}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {isLoading && (
             <Badge variant="neutral">
               <span className="animate-pulse">Loading...</span>
@@ -353,26 +337,29 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             onTouchStart={handleSeekStart}
             onTouchEnd={handleSeekCommit}
             onKeyUp={handleSeekCommit}
-            className="w-full h-2 bg-loft-plum-100 rounded-full appearance-none cursor-pointer
+            className="w-full h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                       [&::-webkit-slider-runnable-track]:h-2
+                       [&::-webkit-slider-runnable-track]:bg-loft-plum-100
+                       [&::-webkit-slider-runnable-track]:rounded-full
                        [&::-webkit-slider-thumb]:appearance-none
-                       [&::-webkit-slider-thumb]:w-4
-                       [&::-webkit-slider-thumb]:h-4
+                       [&::-webkit-slider-thumb]:w-5
+                       [&::-webkit-slider-thumb]:h-5
+                       [&::-webkit-slider-thumb]:-mt-1.5
                        [&::-webkit-slider-thumb]:rounded-full
                        [&::-webkit-slider-thumb]:bg-loft-plum-600
                        [&::-webkit-slider-thumb]:cursor-pointer
-                       [&::-webkit-slider-thumb]:shadow-md
-                       [&::-webkit-slider-thumb]:hover:bg-loft-plum-500"
+                       [&::-webkit-slider-thumb]:shadow-md"
           />
 
           {loopStart !== null && duration > 0 && (
             <div
-              className="absolute top-0 w-0.5 h-5 bg-brass-gold-400 -ml-0.25 pointer-events-none"
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brass-gold-400 pointer-events-none"
               style={{ left: `${(loopStart / duration) * 100}%` }}
             />
           )}
           {loopEnd !== null && duration > 0 && (
             <div
-              className="absolute top-0 w-0.5 h-5 bg-brass-gold-400 -ml-0.25 pointer-events-none"
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brass-gold-400 pointer-events-none"
               style={{ left: `${(loopEnd / duration) * 100}%` }}
             />
           )}
@@ -381,7 +368,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <div className="flex justify-between text-sm text-loft-plum-500">
           <span>{formatTime(currentTime)}</span>
           {isLooping && loopStart !== null && loopEnd !== null && (
-            <span className="text-brass-gold-500">
+            <span className="text-brass-gold-500 hidden sm:inline">
               Loop: {formatTime(loopStart)} - {formatTime(loopEnd)}
             </span>
           )}
@@ -389,9 +376,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      {/* Controls — wraps on narrow screens */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <Button
             variant="ghost"
             size="sm"
@@ -435,7 +422,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           </Button>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           {showLoopControls && (
             <Button
               variant={isLooping ? "gold" : "ghost"}
@@ -463,7 +450,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <Settings2 className="w-4 h-4" />
           </Button>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 sm:space-x-2">
             <button
               onClick={toggleMute}
               className="p-2 rounded-lg hover:bg-loft-plum-100 transition-colors"
@@ -482,10 +469,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               step="0.01"
               value={isMuted ? 0 : volume}
               onChange={handleVolumeChange}
-              className="w-20 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+              className="w-16 sm:w-20 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                         [&::-webkit-slider-runnable-track]:h-1
+                         [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                         [&::-webkit-slider-runnable-track]:rounded-full
                          [&::-webkit-slider-thumb]:appearance-none
-                         [&::-webkit-slider-thumb]:w-3
-                         [&::-webkit-slider-thumb]:h-3
+                         [&::-webkit-slider-thumb]:w-5
+                         [&::-webkit-slider-thumb]:h-5
+                         [&::-webkit-slider-thumb]:-mt-2
                          [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-loft-plum-500
                          [&::-webkit-slider-thumb]:cursor-pointer"
@@ -501,13 +492,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <label className="block text-sm font-medium text-loft-plum-700 mb-2">
               Playback Speed
             </label>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
               {[0.5, 0.75, 1, 1.25, 1.5].map((rate) => (
                 <button
                   key={rate}
                   onClick={() => changePlaybackRate(rate)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     playbackRate === rate
                       ? "bg-loft-plum-600 text-white"
                       : "bg-white text-loft-plum-700 hover:bg-loft-plum-100",
@@ -520,7 +511,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           </div>
 
           {isLooping && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-sm text-loft-plum-600">
                 Loop: {formatTime(loopStart!)} - {formatTime(loopEnd!)}
               </span>

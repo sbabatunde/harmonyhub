@@ -24,7 +24,7 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [masterVolume, setMasterVolume] = useState(0.7); // Lower default to avoid clipping
+  const [masterVolume, setMasterVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [partVolumes, setPartVolumes] = useState<Record<string, number>>({});
   const [partMuted, setPartMuted] = useState<Record<string, boolean>>({});
@@ -33,13 +33,11 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const isSeekingRef = useRef(false);
 
-  // Filter parts that have audio
   const partsWithAudio = useMemo(
     () => parts.filter((p) => p.audioFilePath),
     [parts],
   );
 
-  // Initialize volumes
   useEffect(() => {
     const initialVolumes: Record<string, number> = {};
     const initialMuted: Record<string, boolean> = {};
@@ -51,7 +49,6 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
     setPartMuted(initialMuted);
   }, [partsWithAudio]);
 
-  // Set up all audio elements
   useEffect(() => {
     const audios: HTMLAudioElement[] = [];
 
@@ -62,7 +59,6 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
       audios.push(audio);
 
       const handleLoadedMetadata = () => {
-        // Use the longest duration
         if (audio.duration > duration) {
           setDuration(audio.duration);
         }
@@ -78,7 +74,7 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
     };
   }, [partsWithAudio, duration]);
 
-  // Sync playback across all audio elements
+  // 200ms sync — lighter on mobile
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -88,21 +84,19 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
 
       const masterTime = masterAudio.currentTime;
 
-      // Sync all other audio elements to match master
       partsWithAudio.forEach((part) => {
         const audio = audioRefs.current[part.partType];
-        if (audio && Math.abs(audio.currentTime - masterTime) > 0.1) {
+        if (audio && Math.abs(audio.currentTime - masterTime) > 0.15) {
           audio.currentTime = masterTime;
         }
       });
 
       setCurrentTime(masterTime);
-    }, 100);
+    }, 200);
 
     return () => clearInterval(syncInterval);
   }, [isPlaying, partsWithAudio]);
 
-  // Update volumes
   useEffect(() => {
     partsWithAudio.forEach((part) => {
       const audio = audioRefs.current[part.partType];
@@ -114,27 +108,39 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
     });
   }, [masterVolume, isMuted, partVolumes, partMuted, partsWithAudio]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const audios = partsWithAudio
       .map((part) => audioRefs.current[part.partType])
-      .filter(Boolean);
+      .filter(Boolean) as HTMLAudioElement[];
 
     if (audios.length === 0) return;
 
     if (isPlaying) {
       audios.forEach((audio) => audio.pause());
       setIsPlaying(false);
-    } else {
-      // Sync all to same time before playing
-      const startTime = audios[0].currentTime;
-      audios.forEach((audio) => {
-        audio.currentTime = startTime;
-        audio.play().catch((err) => {
-          console.error("Error playing:", err);
-          setError("Failed to play audio");
-        });
-      });
+      return;
+    }
+
+    const startTime = audios[0].currentTime;
+    audios.forEach((audio) => (audio.currentTime = startTime));
+
+    // iOS-safe: play the master, then the rest
+    try {
+      await audios[0].play();
+      const results = await Promise.allSettled(
+        audios.slice(1).map((a) => a.play()),
+      );
+      const blocked = results.filter((r) => r.status === "rejected").length;
+      if (blocked > 0) {
+        setError(`Device blocked ${blocked} tracks. Tap Play again.`);
+      } else {
+        setError(null);
+      }
       setIsPlaying(true);
+    } catch (err) {
+      console.error("Error playing:", err);
+      setError("Failed to play audio. Tap again.");
+      setIsPlaying(false);
     }
   };
 
@@ -147,9 +153,7 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
 
     partsWithAudio.forEach((part) => {
       const audio = audioRefs.current[part.partType];
-      if (audio) {
-        audio.currentTime = time;
-      }
+      if (audio) audio.currentTime = time;
     });
 
     setTimeout(() => {
@@ -165,23 +169,13 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
     setCurrentTime(0);
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-  };
+  const toggleMute = () => setIsMuted(!isMuted);
 
-  const togglePartMute = (partType: string) => {
-    setPartMuted((prev) => ({
-      ...prev,
-      [partType]: !prev[partType],
-    }));
-  };
+  const togglePartMute = (partType: string) =>
+    setPartMuted((prev) => ({ ...prev, [partType]: !prev[partType] }));
 
-  const setPartVolume = (partType: string, volume: number) => {
-    setPartVolumes((prev) => ({
-      ...prev,
-      [partType]: volume,
-    }));
-  };
+  const setPartVolume = (partType: string, volume: number) =>
+    setPartVolumes((prev) => ({ ...prev, [partType]: volume }));
 
   const formatTime = (time: number) => {
     if (!isFinite(time) || time < 0) return "0:00";
@@ -202,13 +196,10 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
     return colors[partType] || "text-loft-plum-500";
   };
 
-  if (partsWithAudio.length === 0) {
-    return null;
-  }
+  if (partsWithAudio.length === 0) return null;
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Hidden audio elements */}
+    <div className={cn("space-y-4 w-full overflow-hidden", className)}>
       {partsWithAudio.map((part) => (
         <audio
           key={part.id}
@@ -220,11 +211,10 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
         />
       ))}
 
-      {/* Title */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-loft-plum-900 flex items-center">
-          <Layers className="w-5 h-5 mr-2 text-brass-gold-500" />
-          {title || "All Parts Together"}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="font-display text-lg text-loft-plum-900 flex items-center min-w-0">
+          <Layers className="w-5 h-5 mr-2 text-brass-gold-500 flex-shrink-0" />
+          <span className="truncate">{title || "All Parts Together"}</span>
         </h3>
         <Badge variant="gold">{partsWithAudio.length} parts</Badge>
       </div>
@@ -235,7 +225,6 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
         </div>
       )}
 
-      {/* Progress Bar */}
       <div className="space-y-1">
         <input
           type="range"
@@ -244,10 +233,14 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
           step="0.1"
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-2 bg-loft-plum-100 rounded-full appearance-none cursor-pointer
+          className="w-full h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                     [&::-webkit-slider-runnable-track]:h-2
+                     [&::-webkit-slider-runnable-track]:bg-loft-plum-100
+                     [&::-webkit-slider-runnable-track]:rounded-full
                      [&::-webkit-slider-thumb]:appearance-none
-                     [&::-webkit-slider-thumb]:w-4
-                     [&::-webkit-slider-thumb]:h-4
+                     [&::-webkit-slider-thumb]:w-5
+                     [&::-webkit-slider-thumb]:h-5
+                     [&::-webkit-slider-thumb]:-mt-1.5
                      [&::-webkit-slider-thumb]:rounded-full
                      [&::-webkit-slider-thumb]:bg-brass-gold-500
                      [&::-webkit-slider-thumb]:cursor-pointer"
@@ -258,9 +251,8 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
         </div>
       </div>
 
-      {/* Main Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <Button variant="primary" size="sm" onClick={togglePlay}>
             {isPlaying ? (
               <>
@@ -280,7 +272,7 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           <button
             onClick={toggleMute}
             className="p-2 rounded-lg hover:bg-loft-plum-100"
@@ -298,26 +290,29 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
             step="0.01"
             value={masterVolume}
             onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-            className="w-24 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+            className="w-20 sm:w-24 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                       [&::-webkit-slider-runnable-track]:h-1
+                       [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                       [&::-webkit-slider-runnable-track]:rounded-full
                        [&::-webkit-slider-thumb]:appearance-none
-                       [&::-webkit-slider-thumb]:w-3
-                       [&::-webkit-slider-thumb]:h-3
+                       [&::-webkit-slider-thumb]:w-5
+                       [&::-webkit-slider-thumb]:h-5
+                       [&::-webkit-slider-thumb]:-mt-2
                        [&::-webkit-slider-thumb]:rounded-full
                        [&::-webkit-slider-thumb]:bg-brass-gold-500"
           />
         </div>
       </div>
 
-      {/* Individual Part Controls */}
-      <div className="bg-loft-plum-50 rounded-lg p-3 space-y-2">
+      <div className="bg-loft-plum-50 rounded-lg p-3 space-y-3">
         <p className="text-xs font-medium text-loft-plum-500 uppercase tracking-wide mb-2">
           Individual Parts
         </p>
         {partsWithAudio.map((part) => (
-          <div key={part.id} className="flex items-center space-x-3">
+          <div key={part.id} className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => togglePartMute(part.partType)}
-              className="p-1 hover:bg-loft-plum-100 rounded"
+              className="p-1 hover:bg-loft-plum-100 rounded flex-shrink-0"
               title={partMuted[part.partType] ? "Unmute" : "Mute"}
             >
               {partMuted[part.partType] ? (
@@ -332,7 +327,7 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
             </button>
             <span
               className={cn(
-                "w-20 text-sm font-medium capitalize",
+                "w-16 sm:w-20 text-sm font-medium capitalize flex-shrink-0 truncate",
                 getPartColor(part.partType),
               )}
             >
@@ -347,14 +342,18 @@ export const MultiPartPlayer: React.FC<MultiPartPlayerProps> = ({
               onChange={(e) =>
                 setPartVolume(part.partType, parseFloat(e.target.value))
               }
-              className="flex-1 h-1 bg-loft-plum-200 rounded-full appearance-none cursor-pointer
+              className="flex-1 min-w-0 h-2 py-3 bg-transparent appearance-none cursor-pointer touch-none
+                         [&::-webkit-slider-runnable-track]:h-1
+                         [&::-webkit-slider-runnable-track]:bg-loft-plum-200
+                         [&::-webkit-slider-runnable-track]:rounded-full
                          [&::-webkit-slider-thumb]:appearance-none
-                         [&::-webkit-slider-thumb]:w-3
-                         [&::-webkit-slider-thumb]:h-3
+                         [&::-webkit-slider-thumb]:w-5
+                         [&::-webkit-slider-thumb]:h-5
+                         [&::-webkit-slider-thumb]:-mt-2
                          [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-loft-plum-500"
             />
-            <span className="text-xs text-loft-plum-400 w-8 text-right">
+            <span className="text-xs text-loft-plum-400 w-10 text-right flex-shrink-0">
               {Math.round((partVolumes[part.partType] ?? 1) * 100)}%
             </span>
           </div>
