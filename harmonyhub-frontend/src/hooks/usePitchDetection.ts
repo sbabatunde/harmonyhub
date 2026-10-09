@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface PitchDetectionResult {
   pitch: number | null;
@@ -21,8 +21,22 @@ export const usePitchDetection = (): PitchDetectionResult => {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const runningRef = useRef(false); // ← guards the loop
 
-  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const noteNames = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ];
 
   const frequencyToNote = useCallback((frequency: number) => {
     const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
@@ -33,18 +47,20 @@ export const usePitchDetection = (): PitchDetectionResult => {
   }, []);
 
   const detectPitch = useCallback(() => {
-    if (!analyserRef.current) return;
+    // Always schedule the next frame first — this is the key fix.
+    if (!runningRef.current) return;
+    animationFrameRef.current = requestAnimationFrame(detectPitch);
+
+    if (!analyserRef.current || !audioContextRef.current) return;
 
     const bufferLength = analyserRef.current.fftSize;
     const buffer = new Float32Array(bufferLength);
     analyserRef.current.getFloatTimeDomainData(buffer);
 
-    // Autocorrelation
-    const sampleRate = audioContextRef.current?.sampleRate || 44100;
-    let bestOffset = -1;
-    let bestCorrelation = 0;
-    let rms = 0;
+    const sampleRate = audioContextRef.current.sampleRate;
 
+    // RMS gate
+    let rms = 0;
     for (let i = 0; i < buffer.length; i++) {
       const val = buffer[i];
       rms += val * val;
@@ -52,12 +68,18 @@ export const usePitchDetection = (): PitchDetectionResult => {
     rms = Math.sqrt(rms / buffer.length);
 
     if (rms < 0.01) {
+      // Silent frame — clear values but KEEP LOOPING
       setPitch(null);
       setNote(null);
+      setCents(0);
       return;
     }
 
-    for (let offset = 0; offset < buffer.length / 2; offset++) {
+    // Autocorrelation
+    let bestOffset = -1;
+    let bestCorrelation = 0;
+
+    for (let offset = 8; offset < buffer.length / 2; offset++) {
       let correlation = 0;
       for (let i = 0; i < buffer.length / 2; i++) {
         correlation += Math.abs(buffer[i] - buffer[i + offset]);
@@ -75,52 +97,87 @@ export const usePitchDetection = (): PitchDetectionResult => {
       if (frequency > 50 && frequency < 2000) {
         setPitch(frequency);
         setNote(frequencyToNote(frequency));
-        
-        // Calculate cents deviation
+
         const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
         const nearestNote = Math.round(noteNum);
         const centsDeviation = (noteNum - nearestNote) * 100;
         setCents(centsDeviation);
       }
     }
-
-    animationFrameRef.current = requestAnimationFrame(detectPitch);
   }, [frequencyToNote]);
 
   const startListening = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop any prior session cleanly
+      if (runningRef.current) {
+        runningRef.current = false;
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
       streamRef.current = stream;
 
-      audioContextRef.current = new AudioContext();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
 
-      const source = audioContextRef.current.createMediaStreamSource(stream);
+      // iOS/Safari sometimes starts the context suspended
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+
+      analyserRef.current = ctx.createAnalyser();
+      analyserRef.current.fftSize = 2048;
+      analyserRef.current.smoothingTimeConstant = 0.8;
+
+      const source = ctx.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
 
+      runningRef.current = true;
       setIsListening(true);
       setError(null);
       detectPitch();
     } catch (err) {
-      setError('Unable to access microphone');
-      console.error('Error accessing microphone:', err);
+      const message =
+        err instanceof Error ? err.message : "Unable to access microphone";
+      setError(message);
+      console.error("Error accessing microphone:", err);
     }
   }, [detectPitch]);
 
   const stopListening = useCallback(() => {
+    runningRef.current = false;
+
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
     if (audioContextRef.current) {
       audioContextRef.current.close();
+      audioContextRef.current = null;
     }
+    analyserRef.current = null;
+
     setIsListening(false);
     setPitch(null);
     setNote(null);
+    setCents(0);
   }, []);
 
   useEffect(() => {

@@ -14,13 +14,10 @@ import {
   Target,
   Flame,
   BookOpen,
-
   RotateCcw,
-
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
-// ----------------------------------------------------------- Types
 interface Interval {
   name: string;
   shortName: string;
@@ -30,9 +27,8 @@ interface Interval {
   difficulty: 1 | 2 | 3;
 }
 
-type GamePhase = "instructions" | "playing" | "result" | "gameover";
+type GamePhase = "instructions" | "playing" | "gameover";
 
-// ----------------------------------------------------------- Data
 const INTERVALS: Interval[] = [
   {
     name: "Perfect Unison",
@@ -116,13 +112,9 @@ const INTERVALS: Interval[] = [
   },
 ];
 
-const DIFFICULTY_POOLS: Record<1 | 2 | 3, number> = {
-  1: 3, // rounds 1-3 use easy intervals only
-  2: 6, // rounds 4-6 add medium
-  3: 10, // rounds 7+ use all
-};
+const DIFFICULTY_POOLS: Record<1 | 2 | 3, number> = { 1: 3, 2: 6, 3: 10 };
+const TOTAL_ROUNDS = 10;
 
-// ----------------------------------------------------------- Component
 export const IntervalTrainer: React.FC = () => {
   const [phase, setPhase] = useState<GamePhase>("instructions");
   const [currentInterval, setCurrentInterval] = useState<Interval | null>(null);
@@ -139,7 +131,6 @@ export const IntervalTrainer: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
@@ -152,14 +143,11 @@ export const IntervalTrainer: React.FC = () => {
       const ctx = getAudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.type = "sine";
       osc.frequency.value = frequency;
 
-      // Envelope to avoid clicks
       gain.gain.setValueAtTime(0, startTime);
       gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
       gain.gain.setValueAtTime(0.3, startTime + duration - 0.05);
@@ -175,15 +163,10 @@ export const IntervalTrainer: React.FC = () => {
     (interval: Interval) => {
       const ctx = getAudioContext();
       const now = ctx.currentTime + 0.05;
-
-      const baseFreq = 261.63; // C4
+      const baseFreq = 261.63;
       const secondFreq = baseFreq * Math.pow(2, interval.semitones / 12);
-
-      // Play first note
       playNote(baseFreq, now, 0.6);
-      // Play second note slightly later
       playNote(secondFreq, now + 0.7, 0.6);
-
       setHasPlayedCurrent(true);
     },
     [getAudioContext, playNote],
@@ -193,35 +176,28 @@ export const IntervalTrainer: React.FC = () => {
     (interval: Interval, whichNote: "first" | "second") => {
       const ctx = getAudioContext();
       const now = ctx.currentTime + 0.05;
-
       const baseFreq = 261.63;
       const freq =
         whichNote === "first"
           ? baseFreq
           : baseFreq * Math.pow(2, interval.semitones / 12);
-
       playNote(freq, now, 0.6);
     },
     [getAudioContext, playNote],
   );
 
-  // --------------------------------------------------------- Question generation
   const generateQuestion = useCallback(
     (currentRound: number) => {
       const poolSize =
         DIFFICULTY_POOLS[currentRound <= 3 ? 1 : currentRound <= 6 ? 2 : 3];
       const pool = INTERVALS.slice(0, poolSize);
-
       const correct = pool[Math.floor(Math.random() * pool.length)];
-
-      // Build options: correct + 3 random others from pool
       const others = pool.filter((i) => i.name !== correct.name);
       const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
       const chosen = shuffledOthers.slice(
         0,
         Math.min(3, shuffledOthers.length),
       );
-
       const allOptions = [correct, ...chosen].sort(() => Math.random() - 0.5);
 
       setCurrentInterval(correct);
@@ -230,7 +206,6 @@ export const IntervalTrainer: React.FC = () => {
       setFeedback(null);
       setHasPlayedCurrent(false);
 
-      // Auto-play the interval after a short delay
       setTimeout(() => playInterval(correct), 400);
     },
     [playInterval],
@@ -268,18 +243,16 @@ export const IntervalTrainer: React.FC = () => {
       setStreak(0);
     }
 
-    // Move to next round
     feedbackTimeoutRef.current = setTimeout(() => {
       const nextRound = round + 1;
-      if (nextRound > 10) {
+      if (nextRound > TOTAL_ROUNDS) {
         setPhase("gameover");
-        // Submit score
         gameService
           .submitScore({
             game_type: "interval_trainer",
             score: score + (isCorrect ? 10 + streak * 2 : 0),
             accuracy_percentage: Math.round(
-              ((correctCount + (isCorrect ? 1 : 0)) / 10) * 100,
+              ((correctCount + (isCorrect ? 1 : 0)) / TOTAL_ROUNDS) * 100,
             ),
           })
           .catch((err) => console.error("Score submit failed:", err));
@@ -290,7 +263,6 @@ export const IntervalTrainer: React.FC = () => {
     }, 1800);
   };
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
@@ -300,76 +272,63 @@ export const IntervalTrainer: React.FC = () => {
 
   const formatScore = () => score.toLocaleString();
 
-  // --------------------------------------------------------- Render: Instructions
   if (phase === "instructions") {
     return (
-      <Card className="space-y-6 max-w-2xl mx-auto">
-        <div className="text-center space-y-3">
+      <Card className="space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+        <div className="text-center space-y-2 sm:space-y-3">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", damping: 12 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brass-gold-100"
+            className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brass-gold-100"
           >
-            <BookOpen className="w-10 h-10 text-brass-gold-600" />
+            <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-brass-gold-600" />
           </motion.div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Interval Trainer
           </h2>
-          <p className="text-loft-plum-600 max-w-lg mx-auto">
+          <p className="text-sm sm:text-base text-loft-plum-600 max-w-lg mx-auto">
             Train your ear to recognize musical intervals — the distance between
-            two notes. This is the foundation of harmony singing.
+            two notes.
           </p>
         </div>
 
-        <div className="bg-loft-plum-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-loft-plum-900">
+        <div className="bg-loft-plum-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-loft-plum-900">
             How to play
           </h3>
-          <ol className="space-y-2 text-sm text-loft-plum-700">
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                1
-              </span>
-              <span>
+          <ol className="space-y-2 text-xs sm:text-sm text-loft-plum-700">
+            {[
+              <>
                 You'll hear <strong>two notes played in sequence</strong>
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                2
-              </span>
-              <span>
-                Choose which <strong>interval</strong> you heard from the
-                options
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                3
-              </span>
-              <span>
+              </>,
+              <>
+                Choose which <strong>interval</strong> you heard
+              </>,
+              <>
                 Get <strong>10 rounds</strong>. Difficulty increases after round
-                3 and again at round 7
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                4
-              </span>
-              <span>
+                3 and 7
+              </>,
+              <>
                 Build <strong>streaks</strong> for bonus points. Missing resets
                 your streak
-              </span>
-            </li>
+              </>,
+            ].map((text, i) => (
+              <li key={i} className="flex items-start">
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-[10px] sm:text-xs font-medium mr-2 sm:mr-3 flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
           </ol>
         </div>
 
-        <div className="bg-brass-gold-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-brass-gold-800">
+        <div className="bg-brass-gold-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-brass-gold-800">
             Tips for success
           </h3>
-          <ul className="space-y-2 text-sm text-brass-gold-700">
+          <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-brass-gold-700">
             <li>🎵 Listen for the "shape" — bright, sad, tense, or open</li>
             <li>🎵 Use the replay button to hear the interval again</li>
             <li>🎵 Use the reference song for each interval to remember it</li>
@@ -377,9 +336,9 @@ export const IntervalTrainer: React.FC = () => {
           </ul>
         </div>
 
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" size="lg" onClick={startGame}>
-            <Play className="w-5 h-5 mr-2" />
+            <Play className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Start Training
           </Button>
         </div>
@@ -387,9 +346,8 @@ export const IntervalTrainer: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Gameover
   if (phase === "gameover") {
-    const accuracy = Math.round((correctCount / 10) * 100);
+    const accuracy = Math.round((correctCount / TOTAL_ROUNDS) * 100);
     const grade =
       accuracy >= 90
         ? { label: "Outstanding!", color: "text-brass-gold-500" }
@@ -400,47 +358,53 @@ export const IntervalTrainer: React.FC = () => {
             : { label: "Keep practicing", color: "text-loft-plum-500" };
 
     return (
-      <Card className="space-y-6 max-w-lg mx-auto text-center">
+      <Card className="space-y-4 sm:space-y-6 max-w-lg mx-auto text-center">
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", damping: 12 }}
-          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-brass-gold-100"
+          className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-brass-gold-100"
         >
-          <Trophy className="w-12 h-12 text-brass-gold-500" />
+          <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-brass-gold-500" />
         </motion.div>
 
         <div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Session Complete
           </h2>
-          <p className={cn("mt-1 text-lg font-medium", grade.color)}>
+          <p
+            className={cn("mt-1 text-base sm:text-lg font-medium", grade.color)}
+          >
             {grade.label}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Score</p>
-            <p className="text-2xl font-display text-loft-plum-900">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">Score</p>
+            <p className="text-xl sm:text-2xl font-display text-loft-plum-900">
               {formatScore()}
             </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Accuracy</p>
-            <p className="text-2xl font-display text-choir-sage-600">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">
+              Accuracy
+            </p>
+            <p className="text-xl sm:text-2xl font-display text-choir-sage-600">
               {accuracy}%
             </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Best Streak</p>
-            <p className="text-2xl font-display text-brass-gold-500">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">
+              Best Streak
+            </p>
+            <p className="text-xl sm:text-2xl font-display text-brass-gold-500">
               {bestStreak}
             </p>
           </div>
         </div>
 
-        <div className="flex justify-center space-x-3 pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" onClick={startGame}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Play Again
@@ -450,83 +414,75 @@ export const IntervalTrainer: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Playing
-  const progress = (round / 10) * 100;
+  const progress = (round / TOTAL_ROUNDS) * 100;
   const currentDifficultyLabel =
     round <= 3 ? "Warmup" : round <= 6 ? "Intermediate" : "Advanced";
 
   return (
-    <Card className="space-y-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-display text-loft-plum-900">
+    <Card className="space-y-4 sm:space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-display text-loft-plum-900">
             Interval Trainer
           </h2>
-          <p className="text-sm text-loft-plum-500">
-            Round {round} of 10 · {currentDifficultyLabel}
+          <p className="text-xs sm:text-sm text-loft-plum-500">
+            Round {round} of {TOTAL_ROUNDS} · {currentDifficultyLabel}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="plum">
             <Target className="w-3 h-3 mr-1" />
-            {formatScore()} pts
+            {formatScore()}
           </Badge>
           {streak > 0 && (
             <Badge variant="gold">
               <Flame className="w-3 h-3 mr-1" />
-              {streak} streak
+              {streak}
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Progress bar */}
       <ProgressBar value={progress} color="gold" />
 
-      {/* Playback area */}
-      <div className="bg-loft-plum-50 rounded-xl p-8 text-center space-y-4">
-        <p className="text-sm font-medium text-loft-plum-600">
+      <div className="bg-loft-plum-50 rounded-xl p-4 sm:p-6 text-center space-y-3 sm:space-y-4">
+        <p className="text-xs sm:text-sm font-medium text-loft-plum-600">
           Listen to the interval, then choose your answer
         </p>
 
-        <div className="flex justify-center space-x-3">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             variant="primary"
-            size="lg"
             onClick={() => currentInterval && playInterval(currentInterval)}
           >
-            <Volume2 className="w-5 h-5 mr-2" />
-            Play Interval
+            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Play Interval</span>
           </Button>
 
           {currentInterval && (
             <>
               <Button
                 variant="outline"
-                size="lg"
                 onClick={() => playNoteOnly(currentInterval, "first")}
               >
-                Play 1st Note
+                <span className="text-xs sm:text-sm">1st Note</span>
               </Button>
               <Button
                 variant="outline"
-                size="lg"
                 onClick={() => playNoteOnly(currentInterval, "second")}
               >
-                Play 2nd Note
+                <span className="text-xs sm:text-sm">2nd Note</span>
               </Button>
             </>
           )}
         </div>
 
-        <p className="text-xs text-loft-plum-400">
+        <p className="text-[10px] sm:text-xs text-loft-plum-400">
           Tip: Use the individual notes if you need help
         </p>
       </div>
 
-      {/* Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         <AnimatePresence mode="wait">
           {options.map((option, index) => {
             const isSelected = selectedOption === option.name;
@@ -543,10 +499,10 @@ export const IntervalTrainer: React.FC = () => {
                 onClick={() => handleAnswer(option)}
                 disabled={!!selectedOption}
                 className={cn(
-                  "p-4 rounded-xl text-left transition-all border-2",
+                  "p-3 sm:p-4 rounded-xl text-left transition-all border-2",
                   !feedback &&
                     !selectedOption &&
-                    "border-loft-plum-100 hover:border-loft-plum-300 hover:bg-loft-plum-50",
+                    "border-loft-plum-100 hover:border-loft-plum-300 hover:bg-loft-plum-50 active:scale-[0.98]",
                   showAsCorrect && "border-choir-sage-500 bg-choir-sage-50",
                   showAsWrong && "border-ember-coral-500 bg-ember-coral-50",
                   feedback &&
@@ -555,21 +511,21 @@ export const IntervalTrainer: React.FC = () => {
                     "border-loft-plum-100 opacity-50",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-display text-loft-plum-900">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-sm sm:text-base text-loft-plum-900">
                       {option.name}
                     </p>
-                    <p className="text-xs text-loft-plum-500 mt-0.5">
+                    <p className="text-[10px] sm:text-xs text-loft-plum-500 mt-0.5 truncate">
                       {option.mnemonic}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                  <div className="flex-shrink-0">
                     {showAsCorrect && (
-                      <CheckCircle className="w-5 h-5 text-choir-sage-500" />
+                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-choir-sage-500" />
                     )}
                     {showAsWrong && (
-                      <XCircle className="w-5 h-5 text-ember-coral-500" />
+                      <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-ember-coral-500" />
                     )}
                   </div>
                 </div>
@@ -579,7 +535,6 @@ export const IntervalTrainer: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Feedback with reference */}
       <AnimatePresence>
         {feedback && currentInterval && (
           <motion.div
@@ -587,22 +542,22 @@ export const IntervalTrainer: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className={cn(
-              "rounded-lg p-4",
+              "rounded-lg p-3 sm:p-4",
               feedback === "correct"
                 ? "bg-choir-sage-50 border border-choir-sage-200"
                 : "bg-brass-gold-50 border border-brass-gold-200",
             )}
           >
-            <div className="flex items-start space-x-3">
+            <div className="flex items-start space-x-2 sm:space-x-3">
               {feedback === "correct" ? (
-                <CheckCircle className="w-5 h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
               ) : (
-                <Target className="w-5 h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
+                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p
                   className={cn(
-                    "font-medium",
+                    "font-medium text-sm sm:text-base",
                     feedback === "correct"
                       ? "text-choir-sage-800"
                       : "text-brass-gold-800",
@@ -612,7 +567,7 @@ export const IntervalTrainer: React.FC = () => {
                     ? `Correct! +${10 + (streak - 1) * 2} points`
                     : `Not quite. It was ${currentInterval.name}`}
                 </p>
-                <p className="text-sm text-loft-plum-600 mt-1">
+                <p className="text-xs sm:text-sm text-loft-plum-600 mt-1">
                   <strong>Remember it by:</strong> {currentInterval.songExample}
                 </p>
               </div>

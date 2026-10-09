@@ -13,19 +13,16 @@ import {
   Trophy,
   Target,
   Flame,
-
   RotateCcw,
-
   Layers,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
-// ----------------------------------------------------------- Types
 interface ChordQuality {
   name: string;
   shortName: string;
-  intervals: number[]; // semitones from root
+  intervals: number[];
   mood: string;
   example: string;
   difficulty: 1 | 2 | 3;
@@ -34,7 +31,6 @@ interface ChordQuality {
 type GamePhase = "instructions" | "playing" | "gameover";
 type PlayStyle = "block" | "arpeggio";
 
-// ----------------------------------------------------------- Chord data
 const CHORD_QUALITIES: ChordQuality[] = [
   {
     name: "Major",
@@ -86,16 +82,10 @@ const CHORD_QUALITIES: ChordQuality[] = [
   },
 ];
 
-const DIFFICULTY_POOLS: Record<1 | 2 | 3, number> = {
-  1: 2, // major, minor
-  2: 5, // + diminished, augmented, sus4
-  3: 6, // all
-};
-
-const ROOT_FREQUENCY = 261.63; // C4
+const DIFFICULTY_POOLS: Record<1 | 2 | 3, number> = { 1: 2, 2: 5, 3: 6 };
+const ROOT_FREQUENCY = 261.63;
 const TOTAL_ROUNDS = 10;
 
-// ----------------------------------------------------------- Component
 export const ChordEarTraining: React.FC = () => {
   const [phase, setPhase] = useState<GamePhase>("instructions");
   const [target, setTarget] = useState<ChordQuality | null>(null);
@@ -112,7 +102,6 @@ export const ChordEarTraining: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
@@ -125,7 +114,6 @@ export const ChordEarTraining: React.FC = () => {
       const ctx = getAudioContext();
       const now = ctx.currentTime + 0.05;
 
-      // Master gain to avoid clipping when 4 notes hit at once
       const masterGain = ctx.createGain();
       masterGain.connect(ctx.destination);
       masterGain.gain.value = 0.75;
@@ -155,13 +143,11 @@ export const ChordEarTraining: React.FC = () => {
     [getAudioContext],
   );
 
-  // --------------------------------------------------------- Question generation
   const generateQuestion = useCallback(
     (currentRound: number) => {
       const poolSize =
         DIFFICULTY_POOLS[currentRound <= 3 ? 1 : currentRound <= 7 ? 2 : 3];
       const pool = CHORD_QUALITIES.slice(0, poolSize);
-
       const correct = pool[Math.floor(Math.random() * pool.length)];
       const others = pool.filter((c) => c.name !== correct.name);
       const shuffled = [...others].sort(() => Math.random() - 0.5);
@@ -223,7 +209,7 @@ export const ChordEarTraining: React.FC = () => {
     if (finalScore > 0) {
       try {
         await gameService.submitScore({
-          game_type: "interval_trainer", // reuse bucket
+          game_type: "interval_trainer",
           score: finalScore,
           accuracy_percentage: Math.round((finalCorrect / TOTAL_ROUNDS) * 100),
         });
@@ -233,7 +219,6 @@ export const ChordEarTraining: React.FC = () => {
     }
   };
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
@@ -241,76 +226,64 @@ export const ChordEarTraining: React.FC = () => {
     };
   }, []);
 
-  // --------------------------------------------------------- Render: Instructions
   if (phase === "instructions") {
     return (
-      <Card className="space-y-6 max-w-2xl mx-auto">
-        <div className="text-center space-y-3">
+      <Card className="space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+        <div className="text-center space-y-2 sm:space-y-3">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", damping: 12 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brass-gold-100"
+            className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brass-gold-100"
           >
-            <Layers className="w-10 h-10 text-brass-gold-600" />
+            <Layers className="w-8 h-8 sm:w-10 sm:h-10 text-brass-gold-600" />
           </motion.div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Chord Ear Training
           </h2>
-          <p className="text-loft-plum-600 max-w-lg mx-auto">
-            Identify chord qualities by ear — the foundation for singing harmony
-            and hearing the "color" of worship music.
+          <p className="text-sm sm:text-base text-loft-plum-600 max-w-lg mx-auto">
+            Identify chord qualities by ear — the foundation for singing
+            harmony.
           </p>
         </div>
 
-        <div className="bg-loft-plum-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-loft-plum-900">
+        <div className="bg-loft-plum-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-loft-plum-900">
             How to play
           </h3>
-          <ol className="space-y-2 text-sm text-loft-plum-700">
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                1
-              </span>
-              <span>
+          <ol className="space-y-2 text-xs sm:text-sm text-loft-plum-700">
+            {[
+              <>
                 A chord plays. <strong>Identify its quality</strong> — major,
-                minor, diminished, etc.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                2
-              </span>
-              <span>
-                Switch between <strong>block</strong> (all notes together) and
-                <strong> arpeggio</strong> (notes in sequence)
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                3
-              </span>
-              <span>
+                minor, etc.
+              </>,
+              <>
+                Switch between <strong>block</strong> and{" "}
+                <strong>arpeggio</strong>
+              </>,
+              <>
                 Play <strong>10 rounds</strong>. Difficulty rises at round 4 and
-                round 8
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                4
-              </span>
-              <span>
+                8
+              </>,
+              <>
                 <strong>Replay</strong> the chord as many times as you need
-              </span>
-            </li>
+              </>,
+            ].map((text, i) => (
+              <li key={i} className="flex items-start">
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-[10px] sm:text-xs font-medium mr-2 sm:mr-3 flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
           </ol>
         </div>
 
-        <div className="bg-brass-gold-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-brass-gold-800">
+        <div className="bg-brass-gold-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-brass-gold-800">
             The chord qualities
           </h3>
-          <ul className="space-y-2 text-sm text-brass-gold-700">
+          <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-brass-gold-700">
             <li>
               <strong>Major</strong> — bright, happy, stable
             </li>
@@ -332,9 +305,9 @@ export const ChordEarTraining: React.FC = () => {
           </ul>
         </div>
 
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" size="lg" onClick={startGame}>
-            <Play className="w-5 h-5 mr-2" />
+            <Play className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Start Training
           </Button>
         </div>
@@ -342,7 +315,6 @@ export const ChordEarTraining: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Gameover
   if (phase === "gameover") {
     const accuracy = Math.round((correctCount / TOTAL_ROUNDS) * 100);
     const grade =
@@ -355,45 +327,51 @@ export const ChordEarTraining: React.FC = () => {
             : { label: "Keep training", color: "text-loft-plum-500" };
 
     return (
-      <Card className="space-y-6 max-w-lg mx-auto text-center">
+      <Card className="space-y-4 sm:space-y-6 max-w-lg mx-auto text-center">
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", damping: 12 }}
-          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-brass-gold-100"
+          className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-brass-gold-100"
         >
-          <Trophy className="w-12 h-12 text-brass-gold-500" />
+          <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-brass-gold-500" />
         </motion.div>
 
         <div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Session Complete
           </h2>
-          <p className={cn("mt-1 text-lg font-medium", grade.color)}>
+          <p
+            className={cn("mt-1 text-base sm:text-lg font-medium", grade.color)}
+          >
             {grade.label}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Score</p>
-            <p className="text-2xl font-display text-loft-plum-900">{score}</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">Score</p>
+            <p className="text-xl sm:text-2xl font-display text-loft-plum-900">
+              {score}
+            </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Correct</p>
-            <p className="text-2xl font-display text-choir-sage-600">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">Correct</p>
+            <p className="text-xl sm:text-2xl font-display text-choir-sage-600">
               {correctCount}/{TOTAL_ROUNDS}
             </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Best Streak</p>
-            <p className="text-2xl font-display text-brass-gold-500">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">
+              Best Streak
+            </p>
+            <p className="text-xl sm:text-2xl font-display text-brass-gold-500">
               {bestStreak}
             </p>
           </div>
         </div>
 
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" onClick={startGame}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Play Again
@@ -403,62 +381,56 @@ export const ChordEarTraining: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Playing
   const progress = (round / TOTAL_ROUNDS) * 100;
   const currentDifficultyLabel =
     round <= 3 ? "Warmup" : round <= 7 ? "Intermediate" : "Advanced";
 
   return (
-    <Card className="space-y-5 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-display text-loft-plum-900">
+    <Card className="space-y-4 sm:space-y-5 max-w-3xl mx-auto">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-display text-loft-plum-900">
             Chord Ear Training
           </h2>
-          <p className="text-sm text-loft-plum-500">
+          <p className="text-xs sm:text-sm text-loft-plum-500">
             Round {round} of {TOTAL_ROUNDS} · {currentDifficultyLabel}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="plum">
             <Target className="w-3 h-3 mr-1" />
-            {score} pts
+            {score}
           </Badge>
           {streak > 0 && (
             <Badge variant="gold">
               <Flame className="w-3 h-3 mr-1" />
-              {streak} streak
+              {streak}
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Progress */}
       <ProgressBar value={progress} color="gold" />
 
-      {/* Playback */}
-      <div className="bg-loft-plum-50 rounded-xl p-6 space-y-4">
-        <p className="text-sm font-medium text-loft-plum-600 text-center">
+      <div className="bg-loft-plum-50 rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+        <p className="text-xs sm:text-sm font-medium text-loft-plum-600 text-center">
           Listen to the chord
         </p>
 
-        <div className="flex justify-center items-center space-x-3">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
           <Button
             variant="primary"
-            size="lg"
             onClick={() => target && playChord(target, playStyle)}
           >
-            <Volume2 className="w-5 h-5 mr-2" />
-            Play Chord
+            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Play Chord</span>
           </Button>
 
-          {/* Play style toggle */}
-          <div className="flex items-center space-x-1 bg-white rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-white rounded-lg p-1">
             <button
               onClick={() => setPlayStyle("block")}
               className={cn(
-                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                "px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors touch-manipulation",
                 playStyle === "block"
                   ? "bg-loft-plum-600 text-white"
                   : "text-loft-plum-600",
@@ -469,7 +441,7 @@ export const ChordEarTraining: React.FC = () => {
             <button
               onClick={() => setPlayStyle("arpeggio")}
               className={cn(
-                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                "px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors touch-manipulation",
                 playStyle === "arpeggio"
                   ? "bg-loft-plum-600 text-white"
                   : "text-loft-plum-600",
@@ -480,13 +452,12 @@ export const ChordEarTraining: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-xs text-loft-plum-400 text-center">
-          Block = all notes at once · Arpeggio = notes one after another
+        <p className="text-[10px] sm:text-xs text-loft-plum-400 text-center">
+          Block = all at once · Arpeggio = one after another
         </p>
       </div>
 
-      {/* Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         <AnimatePresence>
           {options.map((option, index) => {
             const isSelected = selected === option.name;
@@ -503,7 +474,7 @@ export const ChordEarTraining: React.FC = () => {
                 onClick={() => handleAnswer(option)}
                 disabled={!!selected}
                 className={cn(
-                  "p-4 rounded-xl border-2 text-left transition-all",
+                  "p-3 sm:p-4 rounded-xl border-2 text-left transition-all touch-manipulation active:scale-[0.98]",
                   !feedback &&
                     !selected &&
                     "border-loft-plum-100 hover:border-loft-plum-300 hover:bg-loft-plum-50",
@@ -515,21 +486,21 @@ export const ChordEarTraining: React.FC = () => {
                     "border-loft-plum-100 opacity-50",
                 )}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-display text-loft-plum-900">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-sm sm:text-base text-loft-plum-900">
                       {option.name}
                     </p>
-                    <p className="text-xs text-loft-plum-500 mt-0.5">
+                    <p className="text-[10px] sm:text-xs text-loft-plum-500 mt-0.5 truncate">
                       {option.mood}
                     </p>
                   </div>
-                  <div className="flex-shrink-0 ml-2">
+                  <div className="flex-shrink-0">
                     {showAsCorrect && (
-                      <CheckCircle className="w-5 h-5 text-choir-sage-500" />
+                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-choir-sage-500" />
                     )}
                     {showAsWrong && (
-                      <XCircle className="w-5 h-5 text-ember-coral-500" />
+                      <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-ember-coral-500" />
                     )}
                   </div>
                 </div>
@@ -539,7 +510,6 @@ export const ChordEarTraining: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Feedback */}
       <AnimatePresence>
         {feedback && target && (
           <motion.div
@@ -547,22 +517,22 @@ export const ChordEarTraining: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className={cn(
-              "rounded-lg p-4",
+              "rounded-lg p-3 sm:p-4",
               feedback === "correct"
                 ? "bg-choir-sage-50 border border-choir-sage-200"
                 : "bg-brass-gold-50 border border-brass-gold-200",
             )}
           >
-            <div className="flex items-start space-x-3">
+            <div className="flex items-start space-x-2 sm:space-x-3">
               {feedback === "correct" ? (
-                <CheckCircle className="w-5 h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
               ) : (
-                <Sparkles className="w-5 h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p
                   className={cn(
-                    "font-medium",
+                    "font-medium text-sm sm:text-base",
                     feedback === "correct"
                       ? "text-choir-sage-800"
                       : "text-brass-gold-800",
@@ -572,10 +542,10 @@ export const ChordEarTraining: React.FC = () => {
                     ? `Correct! It was ${target.name}`
                     : `The chord was ${target.name}`}
                 </p>
-                <p className="text-sm text-loft-plum-600 mt-1">
+                <p className="text-xs sm:text-sm text-loft-plum-600 mt-1">
                   <strong>Character:</strong> {target.mood}
                 </p>
-                <p className="text-xs text-loft-plum-500 mt-0.5">
+                <p className="text-[10px] sm:text-xs text-loft-plum-500 mt-0.5">
                   <strong>Where you'll hear it:</strong> {target.example}
                 </p>
               </div>

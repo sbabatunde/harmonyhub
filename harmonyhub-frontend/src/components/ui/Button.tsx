@@ -21,10 +21,10 @@ const variantStyles = {
   ghost: "text-loft-plum-600 hover:bg-loft-plum-100 focus:ring-loft-plum-400",
 };
 
-const sizeStyles = {
+const sizeClasses = {
   sm: "px-3 py-1.5 text-sm",
   md: "px-4 py-2 text-base",
-  lg: "px-6 py-3 text-lg",
+  lg: "px-4 py-2.5 text-base sm:px-6 sm:py-3 sm:text-lg",
 };
 
 export const Button: React.FC<ButtonProps> = ({
@@ -43,9 +43,9 @@ export const Button: React.FC<ButtonProps> = ({
       className={cn(
         "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200",
         "focus:outline-none focus:ring-2 focus:ring-offset-2",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
+        "disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation",
         variantStyles[variant],
-        sizeStyles[size],
+        sizeClasses[size],
         className,
       )}
       disabled={disabled || isLoading}

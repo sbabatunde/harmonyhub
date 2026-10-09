@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/helpers";
 
-// ----------------------------------------------------------- Types
 interface NoteOption {
   name: string;
   frequency: number;
@@ -27,8 +26,6 @@ interface NoteOption {
 
 type GamePhase = "instructions" | "playing" | "gameover";
 
-// ----------------------------------------------------------- Note pools
-// Two octaves of natural notes, arranged for progressive difficulty.
 const NOTE_POOLS: Record<1 | 2 | 3, NoteOption[]> = {
   1: [
     { name: "C4", frequency: 261.63 },
@@ -59,11 +56,8 @@ const NOTE_POOLS: Record<1 | 2 | 3, NoteOption[]> = {
 };
 
 const TOTAL_ROUNDS = 10;
-
-// Reference tones — a fixed C4 pitch the user can play any time as an anchor
 const REFERENCE_NOTE: NoteOption = { name: "C4", frequency: 261.63 };
 
-// ----------------------------------------------------------- Component
 export const NoteRecognition: React.FC = () => {
   const [phase, setPhase] = useState<GamePhase>("instructions");
   const [target, setTarget] = useState<NoteOption | null>(null);
@@ -79,7 +73,6 @@ export const NoteRecognition: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --------------------------------------------------------- Audio
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
@@ -110,12 +103,10 @@ export const NoteRecognition: React.FC = () => {
     [getAudioContext],
   );
 
-  // --------------------------------------------------------- Question generation
   const generateQuestion = useCallback(
     (currentRound: number) => {
       const poolSize = currentRound <= 3 ? 1 : currentRound <= 7 ? 2 : 3;
       const pool = NOTE_POOLS[poolSize as 1 | 2 | 3];
-
       const correct = pool[Math.floor(Math.random() * pool.length)];
       const others = pool.filter((n) => n.name !== correct.name);
       const shuffled = [...others].sort(() => Math.random() - 0.5);
@@ -125,7 +116,7 @@ export const NoteRecognition: React.FC = () => {
       setOptions([correct, ...chosen].sort(() => Math.random() - 0.5));
       setSelected(null);
       setFeedback(null);
-      // Auto-play after a short delay
+
       setTimeout(() => playTone(correct.frequency), 500);
     },
     [playTone],
@@ -177,7 +168,7 @@ export const NoteRecognition: React.FC = () => {
     if (finalScore > 0) {
       try {
         await gameService.submitScore({
-          game_type: "interval_trainer", // reuse bucket; can add a new type later
+          game_type: "interval_trainer",
           score: finalScore,
           accuracy_percentage: Math.round((finalCorrect / TOTAL_ROUNDS) * 100),
         });
@@ -187,7 +178,6 @@ export const NoteRecognition: React.FC = () => {
     }
   };
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
@@ -195,77 +185,63 @@ export const NoteRecognition: React.FC = () => {
     };
   }, []);
 
-  // --------------------------------------------------------- Render: Instructions
   if (phase === "instructions") {
     return (
-      <Card className="space-y-6 max-w-2xl mx-auto">
-        <div className="text-center space-y-3">
+      <Card className="space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+        <div className="text-center space-y-2 sm:space-y-3">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", damping: 12 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brass-gold-100"
+            className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brass-gold-100"
           >
-            <Headphones className="w-10 h-10 text-brass-gold-600" />
+            <Headphones className="w-8 h-8 sm:w-10 sm:h-10 text-brass-gold-600" />
           </motion.div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Note Recognition
           </h2>
-          <p className="text-loft-plum-600 max-w-lg mx-auto">
-            Train your ear to recognize individual notes by pitch. This builds
-            the foundation for singing harmonies and following sheet music by
-            ear.
+          <p className="text-sm sm:text-base text-loft-plum-600 max-w-lg mx-auto">
+            Train your ear to recognize individual notes by pitch.
           </p>
         </div>
 
-        <div className="bg-loft-plum-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-loft-plum-900">
+        <div className="bg-loft-plum-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-loft-plum-900">
             How to play
           </h3>
-          <ol className="space-y-2 text-sm text-loft-plum-700">
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                1
-              </span>
-              <span>
+          <ol className="space-y-2 text-xs sm:text-sm text-loft-plum-700">
+            {[
+              <>
                 A single note plays. <strong>Identify which note</strong> you
                 heard
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                2
-              </span>
-              <span>
-                Use the <strong>reference C</strong> button any time to compare
-                against a known pitch
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                3
-              </span>
-              <span>
+              </>,
+              <>
+                Use the <strong>reference C</strong> button to compare against a
+                known pitch
+              </>,
+              <>
                 Play <strong>10 rounds</strong>. Difficulty rises at round 4 and
-                round 8
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-xs font-medium mr-3 flex-shrink-0 mt-0.5">
-                4
-              </span>
-              <span>
+                8
+              </>,
+              <>
                 Build <strong>streaks</strong> for bonus points
-              </span>
-            </li>
+              </>,
+            ].map((text, i) => (
+              <li key={i} className="flex items-start">
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-loft-plum-900 text-brass-gold-400 flex items-center justify-center text-[10px] sm:text-xs font-medium mr-2 sm:mr-3 flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
           </ol>
         </div>
 
-        <div className="bg-brass-gold-50 rounded-lg p-5 space-y-3">
-          <h3 className="font-display text-lg text-brass-gold-800">
+        <div className="bg-brass-gold-50 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3">
+          <h3 className="font-display text-base sm:text-lg text-brass-gold-800">
             Tips for success
           </h3>
-          <ul className="space-y-2 text-sm text-brass-gold-700">
+          <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-brass-gold-700">
             <li>🎧 Use the reference C to anchor your sense of pitch</li>
             <li>🎧 Try humming the reference C, then compare to the target</li>
             <li>🎧 Don't rush — the answer buttons stay available</li>
@@ -275,9 +251,9 @@ export const NoteRecognition: React.FC = () => {
           </ul>
         </div>
 
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" size="lg" onClick={startGame}>
-            <Play className="w-5 h-5 mr-2" />
+            <Play className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Start Training
           </Button>
         </div>
@@ -285,7 +261,6 @@ export const NoteRecognition: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Gameover
   if (phase === "gameover") {
     const accuracy = Math.round((correctCount / TOTAL_ROUNDS) * 100);
     const grade =
@@ -298,45 +273,51 @@ export const NoteRecognition: React.FC = () => {
             : { label: "Keep training", color: "text-loft-plum-500" };
 
     return (
-      <Card className="space-y-6 max-w-lg mx-auto text-center">
+      <Card className="space-y-4 sm:space-y-6 max-w-lg mx-auto text-center">
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", damping: 12 }}
-          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-brass-gold-100"
+          className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-brass-gold-100"
         >
-          <Trophy className="w-12 h-12 text-brass-gold-500" />
+          <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-brass-gold-500" />
         </motion.div>
 
         <div>
-          <h2 className="text-3xl font-display text-loft-plum-900">
+          <h2 className="text-2xl sm:text-3xl font-display text-loft-plum-900">
             Session Complete
           </h2>
-          <p className={cn("mt-1 text-lg font-medium", grade.color)}>
+          <p
+            className={cn("mt-1 text-base sm:text-lg font-medium", grade.color)}
+          >
             {grade.label}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Score</p>
-            <p className="text-2xl font-display text-loft-plum-900">{score}</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">Score</p>
+            <p className="text-xl sm:text-2xl font-display text-loft-plum-900">
+              {score}
+            </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Correct</p>
-            <p className="text-2xl font-display text-choir-sage-600">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">Correct</p>
+            <p className="text-xl sm:text-2xl font-display text-choir-sage-600">
               {correctCount}/{TOTAL_ROUNDS}
             </p>
           </div>
-          <div className="bg-loft-plum-50 rounded-lg p-3">
-            <p className="text-xs text-loft-plum-500">Best Streak</p>
-            <p className="text-2xl font-display text-brass-gold-500">
+          <div className="bg-loft-plum-50 rounded-lg p-2 sm:p-3">
+            <p className="text-[10px] sm:text-xs text-loft-plum-500">
+              Best Streak
+            </p>
+            <p className="text-xl sm:text-2xl font-display text-brass-gold-500">
               {bestStreak}
             </p>
           </div>
         </div>
 
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1 sm:pt-2">
           <Button variant="primary" onClick={startGame}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Play Again
@@ -346,73 +327,66 @@ export const NoteRecognition: React.FC = () => {
     );
   }
 
-  // --------------------------------------------------------- Render: Playing
   const progress = (round / TOTAL_ROUNDS) * 100;
   const currentDifficultyLabel =
     round <= 3 ? "Warmup" : round <= 7 ? "Intermediate" : "Advanced";
 
   return (
-    <Card className="space-y-5 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-display text-loft-plum-900">
+    <Card className="space-y-4 sm:space-y-5 max-w-3xl mx-auto">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-display text-loft-plum-900">
             Note Recognition
           </h2>
-          <p className="text-sm text-loft-plum-500">
+          <p className="text-xs sm:text-sm text-loft-plum-500">
             Round {round} of {TOTAL_ROUNDS} · {currentDifficultyLabel}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="plum">
             <Target className="w-3 h-3 mr-1" />
-            {score} pts
+            {score}
           </Badge>
           {streak > 0 && (
             <Badge variant="gold">
               <Flame className="w-3 h-3 mr-1" />
-              {streak} streak
+              {streak}
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Progress */}
       <ProgressBar value={progress} color="gold" />
 
-      {/* Playback */}
-      <div className="bg-loft-plum-50 rounded-xl p-6 text-center space-y-4">
-        <p className="text-sm font-medium text-loft-plum-600">
+      <div className="bg-loft-plum-50 rounded-xl p-4 sm:p-6 text-center space-y-3 sm:space-y-4">
+        <p className="text-xs sm:text-sm font-medium text-loft-plum-600">
           Listen to the note
         </p>
 
-        <div className="flex justify-center space-x-3">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             variant="primary"
-            size="lg"
             onClick={() => target && playTone(target.frequency)}
           >
-            <Volume2 className="w-5 h-5 mr-2" />
-            Play Note
+            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Play Note</span>
           </Button>
 
           <Button
             variant="outline"
-            size="lg"
             onClick={() => playTone(REFERENCE_NOTE.frequency)}
           >
-            <Music className="w-5 h-5 mr-2" />
-            Reference C
+            <Music className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Reference C</span>
           </Button>
         </div>
 
-        <p className="text-xs text-loft-plum-400">
+        <p className="text-[10px] sm:text-xs text-loft-plum-400">
           Tip: Compare the target to the reference C to find its pitch
         </p>
       </div>
 
-      {/* Options */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <AnimatePresence>
           {options.map((option, index) => {
             const isSelected = selected === option.name;
@@ -429,7 +403,7 @@ export const NoteRecognition: React.FC = () => {
                 onClick={() => handleAnswer(option)}
                 disabled={!!selected}
                 className={cn(
-                  "p-5 rounded-xl border-2 transition-all",
+                  "p-3 sm:p-5 rounded-xl border-2 transition-all touch-manipulation active:scale-[0.98]",
                   !feedback &&
                     !selected &&
                     "border-loft-plum-100 hover:border-loft-plum-300 hover:bg-loft-plum-50",
@@ -441,15 +415,15 @@ export const NoteRecognition: React.FC = () => {
                     "border-loft-plum-100 opacity-50",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-2xl text-loft-plum-900">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-display text-xl sm:text-2xl text-loft-plum-900">
                     {option.name}
                   </span>
                   {showAsCorrect && (
-                    <CheckCircle className="w-6 h-6 text-choir-sage-500" />
+                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-choir-sage-500 flex-shrink-0" />
                   )}
                   {showAsWrong && (
-                    <XCircle className="w-6 h-6 text-ember-coral-500" />
+                    <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-ember-coral-500 flex-shrink-0" />
                   )}
                 </div>
               </motion.button>
@@ -458,7 +432,6 @@ export const NoteRecognition: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Feedback */}
       <AnimatePresence>
         {feedback && target && (
           <motion.div
@@ -466,22 +439,22 @@ export const NoteRecognition: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className={cn(
-              "rounded-lg p-4",
+              "rounded-lg p-3 sm:p-4",
               feedback === "correct"
                 ? "bg-choir-sage-50 border border-choir-sage-200"
                 : "bg-brass-gold-50 border border-brass-gold-200",
             )}
           >
-            <div className="flex items-start space-x-3">
+            <div className="flex items-start space-x-2 sm:space-x-3">
               {feedback === "correct" ? (
-                <CheckCircle className="w-5 h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-choir-sage-500 flex-shrink-0 mt-0.5" />
               ) : (
-                <Target className="w-5 h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
+                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-brass-gold-500 flex-shrink-0 mt-0.5" />
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p
                   className={cn(
-                    "font-medium",
+                    "font-medium text-sm sm:text-base",
                     feedback === "correct"
                       ? "text-choir-sage-800"
                       : "text-brass-gold-800",
@@ -491,7 +464,7 @@ export const NoteRecognition: React.FC = () => {
                     ? `Correct! It was ${target.name}`
                     : `The note was ${target.name}`}
                 </p>
-                <p className="text-sm text-loft-plum-600 mt-1">
+                <p className="text-xs sm:text-sm text-loft-plum-600 mt-1">
                   Compare it with the reference C next time — distance is key.
                 </p>
               </div>
