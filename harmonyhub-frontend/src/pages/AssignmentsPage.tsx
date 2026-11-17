@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assignmentService } from "@/api/services/assignmentService";
 import { useAuthStore } from "@/store/authStore";
@@ -6,19 +7,18 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AssignmentForm } from "@/components/assignments/AssignmentForm";
 import { formatDate } from "@/utils/helpers";
 import { Assignment } from "@/types";
 
 export default function AssignmentsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const { data: assignments, isLoading } = useQuery({
+  const { data: assignments = [], isLoading } = useQuery({
     queryKey: ["assignments"],
-    queryFn: async () => {
-      const response = await assignmentService.getAssignments();
-      return response;
-    },
+    queryFn: () => assignmentService.getAssignments(),
   });
 
   const completeMutation = useMutation({
@@ -30,7 +30,6 @@ export default function AssignmentsPage() {
 
   if (isLoading) return <Spinner />;
 
-  const assignmentList = assignments || [];
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
 
   return (
@@ -46,10 +45,14 @@ export default function AssignmentsPage() {
               : "Your practice assignments"}
           </p>
         </div>
-        {isTeacher && <Button variant="primary">New Assignment</Button>}
+        {isTeacher && (
+          <Button variant="primary" onClick={() => setIsFormOpen(true)}>
+            New Assignment
+          </Button>
+        )}
       </div>
 
-      {assignmentList.length === 0 ? (
+      {assignments.length === 0 ? (
         <EmptyState
           icon="📝"
           title="No assignments yet"
@@ -57,7 +60,7 @@ export default function AssignmentsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {assignmentList.map((assignment: Assignment) => (
+          {assignments.map((assignment: Assignment) => (
             <Card key={assignment.id} className="flex items-center space-x-4">
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
@@ -92,6 +95,11 @@ export default function AssignmentsPage() {
           ))}
         </div>
       )}
+
+      <AssignmentForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+      />
     </div>
   );
 }
