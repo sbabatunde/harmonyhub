@@ -83,13 +83,39 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
     });
   };
 
-  const filteredStudents = students?.filter(
+  // Safely normalize students to an array
+  const studentsList: Student[] = Array.isArray(students)
+    ? students
+    : Array.isArray((students as any)?.data)
+      ? (students as any).data
+      : Array.isArray((students as any)?.students)
+        ? (students as any).students
+        : [];
+
+  const filteredStudents = studentsList.filter(
     (student: Student) =>
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchTerm.toLowerCase()),
+      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const songs = Array.isArray(songsData) ? songsData : [];
+  const songs: any[] = Array.isArray(songsData)
+    ? songsData
+    : Array.isArray((songsData as any)?.data)
+      ? (songsData as any).data
+      : [];
+
+  const watchedStudentId = watch("student_id");
+  const watchedSongId = watch("song_id");
+  const watchedDueDate = watch("due_date");
+
+  const selectedStudentName = preselectedStudent
+    ? preselectedStudent.name
+    : filteredStudents.find((s) => s.id === parseInt(watchedStudentId || "0"))
+        ?.name;
+
+  const selectedSongTitle = songs.find(
+    (s: any) => s.id === parseInt(watchedSongId || "0"),
+  )?.title;
 
   return (
     <Modal
@@ -132,7 +158,7 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
           ) : (
             <select className="input-field" {...register("student_id")}>
               <option value="">Select student</option>
-              {filteredStudents?.map((student: Student) => (
+              {filteredStudents.map((student: Student) => (
                 <option key={student.id} value={student.id}>
                   {student.name} - {student.voicePart || "No part"}
                 </option>
@@ -180,7 +206,7 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
         />
 
         {/* Selected Info */}
-        {watch("student_id") && watch("song_id") && (
+        {watchedStudentId && watchedSongId && (
           <div className="bg-brass-gold-50 rounded-lg p-4">
             <h4 className="text-sm font-medium text-brass-gold-800 mb-2">
               Assignment Summary
@@ -188,28 +214,16 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
             <div className="space-y-1 text-sm text-brass-gold-700">
               <p>
                 <span className="font-medium">Student:</span>{" "}
-                {
-                  filteredStudents?.find(
-                    (s) => s.id === parseInt(watch("student_id")),
-                  )?.name
-                }
+                {selectedStudentName || "—"}
               </p>
               <p>
                 <span className="font-medium">Song:</span>{" "}
-                {
-                  songs.find((s: any) => s.id === parseInt(watch("song_id")))
-                    ?.title
-                }
+                {selectedSongTitle || "—"}
               </p>
-              {watch("due_date") && (
+              {watchedDueDate && (
                 <p>
                   <span className="font-medium">Due:</span>{" "}
-                  {watch("due_date") && (
-                    <p>
-                      <span className="font-medium">Due:</span>{" "}
-                      {new Date(watch("due_date")!).toLocaleDateString()}
-                    </p>
-                  )}
+                  {new Date(watchedDueDate).toLocaleDateString()}
                 </p>
               )}
             </div>

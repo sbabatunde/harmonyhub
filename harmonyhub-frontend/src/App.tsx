@@ -6,26 +6,25 @@ import {
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
-// import { logger } from "@/utils/logger";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
-// Layouts
+// Layouts — keep eager, they're tiny and render on every page
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
-
-// Pages
-import LoginPage from "@/pages/LoginPage";
-import RegisterPage from "@/pages/RegisterPage";
-import DashboardPage from "@/pages/DashboardPage";
-import SongsPage from "@/pages/SongsPage";
-import SongDetailPage from "@/pages/SongDetailPage";
-import PracticePage from "@/pages/PracticePage";
-import CurriculumPage from "@/pages/CurriculumPage";
-import GamesPage from "@/pages/GamesPage";
-import AssignmentsPage from "@/pages/AssignmentsPage";
-import TeacherDashboard from "@/pages/TeacherDashboard";
-import ProfilePage from "@/pages/ProfilePage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// Pages — lazy-loaded so each route ships in its own chunk
+const LoginPage         = lazy(() => import("@/pages/LoginPage"));
+const RegisterPage      = lazy(() => import("@/pages/RegisterPage"));
+const DashboardPage     = lazy(() => import("@/pages/DashboardPage"));
+const SongsPage         = lazy(() => import("@/pages/SongsPage"));
+const SongDetailPage    = lazy(() => import("@/pages/SongDetailPage"));
+const PracticePage      = lazy(() => import("@/pages/PracticePage"));
+const CurriculumPage    = lazy(() => import("@/pages/CurriculumPage"));
+const GamesPage         = lazy(() => import("@/pages/GamesPage"));
+const AssignmentsPage   = lazy(() => import("@/pages/AssignmentsPage"));
+const TeacherDashboard  = lazy(() => import("@/pages/TeacherDashboard"));
+const ProfilePage       = lazy(() => import("@/pages/ProfilePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,28 +38,21 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function PageFallback() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-loft-plum-600" />
+    </div>
+  );
 }
 
 function App() {
   const { user } = useAuthStore();
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // useEffect(() => {
-  //   const init = async () => {
-  //     logger.info("App initializing...");
-  //     // fetchUser will set user if session exists, null if not
-  //     await fetchUser();
-  //     setIsInitialized(true);
-  //   };
-
-  //   init();
-  // }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -85,38 +77,40 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
-          <Routes>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-            </Route>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+              </Route>
 
-            <Route
-              element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }
-            >
               <Route
-                path="/"
                 element={
-                  user?.role === "teacher" || user?.role === "admin" ? (
-                    <TeacherDashboard />
-                  ) : (
-                    <DashboardPage />
-                  )
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
                 }
-              />
-              <Route path="/songs" element={<SongsPage />} />
-              <Route path="/songs/:id" element={<SongDetailPage />} />
-              <Route path="/practice" element={<PracticePage />} />
-              <Route path="/curriculum" element={<CurriculumPage />} />
-              <Route path="/games" element={<GamesPage />} />
-              <Route path="/assignments" element={<AssignmentsPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-            </Route>
-          </Routes>
+              >
+                <Route
+                  path="/"
+                  element={
+                    user?.role === "teacher" || user?.role === "admin" ? (
+                      <TeacherDashboard />
+                    ) : (
+                      <DashboardPage />
+                    )
+                  }
+                />
+                <Route path="/songs" element={<SongsPage />} />
+                <Route path="/songs/:id" element={<SongDetailPage />} />
+                <Route path="/practice" element={<PracticePage />} />
+                <Route path="/curriculum" element={<CurriculumPage />} />
+                <Route path="/games" element={<GamesPage />} />
+                <Route path="/assignments" element={<AssignmentsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+              </Route>
+            </Routes>
+          </Suspense>
         </Router>
       </QueryClientProvider>
     </ErrorBoundary>
