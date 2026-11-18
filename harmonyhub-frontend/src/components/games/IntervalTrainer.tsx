@@ -129,7 +129,7 @@ export const IntervalTrainer: React.FC = () => {
   const [hasPlayedCurrent, setHasPlayedCurrent] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {

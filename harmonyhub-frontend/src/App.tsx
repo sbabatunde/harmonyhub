@@ -13,9 +13,6 @@ import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-//Test for chat
-import { echo } from "@/lib/echo";
-
 // Pages — lazy-loaded so each route ships in its own chunk
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
@@ -63,14 +60,6 @@ function App() {
       setIsInitialized(true);
     };
     init();
-  }, []);
-
-  useEffect(() => {
-    const ch = echo.private("chat.room.1");
-    ch.listen(".message.sent", (e: unknown) => console.log("GOT MESSAGE", e));
-    return () => {
-      echo.leave("chat.room.1");
-    };
   }, []);
 
   if (!isInitialized) {

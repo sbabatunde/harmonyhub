@@ -26,7 +26,8 @@ export default function PracticePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [accuracyReadings, setAccuracyReadings] = useState<number[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { pitch, note, cents, startListening, stopListening, error } =
     usePitchDetection();

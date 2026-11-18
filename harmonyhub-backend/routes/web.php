@@ -11,15 +11,11 @@ Route::get('/', function () {
 Route::get('/login', fn() => response()->json(['message' => 'Unauthenticated.'], 401))
     ->name('login');
 
-
-Route::get('/test-broadcast', function () {
-    broadcast(new \Modules\Chat\App\Events\MessageSent(
-        App\Models\ChatMessage::create([
-            'room_id'   => 1,
-            'sender_id' => 1,
-            'type'      => 'text',
-            'content'   => 'hello from reverb test',
-        ])
-    ));
-    return 'broadcast fired';
+// routes/web.php or routes/api.php (temporary)
+Route::get('/debug-disk', function () {
+    return [
+        'default_disk' => config('filesystems.default'),
+        'disk_url' => Storage::disk(config('filesystems.default'))->url('songs/audio/test.mp3'),
+        'env_filesystem' => env('FILESYSTEM_DISK'),
+    ];
 });

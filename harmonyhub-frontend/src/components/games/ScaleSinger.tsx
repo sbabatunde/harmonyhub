@@ -68,7 +68,7 @@ export const ScaleSinger: React.FC = () => {
 
   const holdStartRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioningRef = useRef(false);
 
   const {

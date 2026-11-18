@@ -73,7 +73,7 @@ export const PitchPerfectGame: React.FC = () => {
 
   const holdStartRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     pitch,

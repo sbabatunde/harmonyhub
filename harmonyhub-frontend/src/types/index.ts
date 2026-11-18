@@ -89,3 +89,53 @@ export interface ApiResponse<T> {
   message?: string | null;
   data: T;
 }
+
+// ---- Chat ----
+
+export interface ChatRoomMember {
+  id: number;
+  name: string;
+  email: string;
+  role: "student" | "teacher" | "admin";
+}
+
+export interface ChatRoom {
+  id: number;
+  name: string | null;
+  is_group: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  members: ChatRoomMember[];
+  latest_message?: ChatMessage | null;
+  unread_count?: number;
+}
+
+export type ChatMessageType = "text" | "voice";
+
+export interface ChatMessage {
+  id: number;
+  room_id: number;
+  sender_id: number;
+  sender_name: string;
+  type: ChatMessageType;
+  content: string | null;
+  voice_path: string | null;
+  voice_duration_ms: number | null;
+  voice_size_bytes: number | null;
+  created_at: string;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+export interface VoicePresignResponse {
+  key: string;
+  upload_url: string;
+  headers: Record<string, string>;
+}

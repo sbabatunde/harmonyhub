@@ -131,7 +131,7 @@ export const RhythmMaster: React.FC = () => {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const patternStartRef = useRef<number>(0);
-  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tapPadRef = useRef<HTMLButtonElement>(null);
 
   const getAudioContext = useCallback(() => {

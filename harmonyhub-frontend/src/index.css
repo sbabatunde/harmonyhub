@@ -5,7 +5,8 @@
   --font-display: "Georgia", serif;
   --font-body: "Inter", system-ui, sans-serif;
 
-  --shadow-loft: 0 4px 6px -1px rgba(47, 37, 56, 0.1), 0 2px 4px -1px rgba(47, 37, 56, 0.06);
+  --shadow-loft:
+    0 4px 6px -1px rgba(47, 37, 56, 0.1), 0 2px 4px -1px rgba(47, 37, 56, 0.06);
   --shadow-candle: 0 0 20px rgba(201, 151, 44, 0.3);
 
   /* Vesper Theme Colors */
@@ -61,17 +62,29 @@
 /* 2. Base Styles */
 @layer base {
   body {
-
     background-color: var(--color-loft-plum-50);
     color: var(--color-loft-plum-900);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    background-image: 
-      radial-gradient(ellipse at top left, rgba(63, 50, 75, 0.05) 0%, transparent 50%),
-      radial-gradient(ellipse at bottom right, rgba(217, 175, 58, 0.03) 0%, transparent 50%);
+    background-image:
+      radial-gradient(
+        ellipse at top left,
+        rgba(63, 50, 75, 0.05) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at bottom right,
+        rgba(217, 175, 58, 0.03) 0%,
+        transparent 50%
+      );
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
   }
 }
@@ -84,8 +97,13 @@
   border-radius: 0.5rem;
   transition-property: color, background-color, border-color;
   transition-duration: 200ms;
-  &:hover { background-color: var(--color-loft-plum-700); }
-  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-loft-plum-500); }
+  &:hover {
+    background-color: var(--color-loft-plum-700);
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-loft-plum-500);
+  }
 }
 
 @utility btn-gold {
@@ -95,8 +113,13 @@
   border-radius: 0.5rem;
   transition-property: color, background-color, border-color;
   transition-duration: 200ms;
-  &:hover { background-color: var(--color-brass-gold-300); }
-  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-brass-gold-500); }
+  &:hover {
+    background-color: var(--color-brass-gold-300);
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-brass-gold-500);
+  }
 }
 
 @utility card {
@@ -114,8 +137,14 @@
   border-radius: 0.5rem;
   background-color: #ffffff;
   color: var(--color-loft-plum-900);
-  &:focus { outline: none; box-shadow: 0 0 0 2px var(--color-loft-plum-500); border-color: transparent; }
-  &::placeholder { color: var(--color-loft-plum-300); }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-loft-plum-500);
+    border-color: transparent;
+  }
+  &::placeholder {
+    color: var(--color-loft-plum-300);
+  }
 }
 
 @utility badge-sage {
@@ -143,4 +172,15 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

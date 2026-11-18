@@ -100,7 +100,7 @@ export const ChordEarTraining: React.FC = () => {
   const [playStyle, setPlayStyle] = useState<PlayStyle>("block");
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
