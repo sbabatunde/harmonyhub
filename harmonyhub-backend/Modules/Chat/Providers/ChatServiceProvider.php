@@ -1,21 +1,21 @@
 <?php
 
-namespace Modules\Auth\Providers;
+namespace Modules\Chat\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 
-class AuthServiceProvider extends ModuleServiceProvider
+class ChatServiceProvider extends ModuleServiceProvider
 {
-    /** 
+    /**
      * The name of the module.
      */
-    protected string $name = 'Auth';
+    protected string $name = 'Chat';
 
     /**
      * The lowercase version of the module name.
      */
-    protected string $nameLower = 'auth';
+    protected string $nameLower = 'chat';
 
     /**
      * Command classes to register.
@@ -34,6 +34,9 @@ class AuthServiceProvider extends ModuleServiceProvider
         RouteServiceProvider::class,
     ];
 
+    protected $policies = [
+        \App\Models\ChatRoom::class => \Modules\Chat\App\Policies\ChatRoomPolicy::class,
+    ];
     /**
      * Define module schedules.
      * 

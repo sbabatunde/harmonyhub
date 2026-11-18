@@ -13,18 +13,21 @@ import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+//Test for chat
+import { echo } from "@/lib/echo";
+
 // Pages — lazy-loaded so each route ships in its own chunk
-const LoginPage         = lazy(() => import("@/pages/LoginPage"));
-const RegisterPage      = lazy(() => import("@/pages/RegisterPage"));
-const DashboardPage     = lazy(() => import("@/pages/DashboardPage"));
-const SongsPage         = lazy(() => import("@/pages/SongsPage"));
-const SongDetailPage    = lazy(() => import("@/pages/SongDetailPage"));
-const PracticePage      = lazy(() => import("@/pages/PracticePage"));
-const CurriculumPage    = lazy(() => import("@/pages/CurriculumPage"));
-const GamesPage         = lazy(() => import("@/pages/GamesPage"));
-const AssignmentsPage   = lazy(() => import("@/pages/AssignmentsPage"));
-const TeacherDashboard  = lazy(() => import("@/pages/TeacherDashboard"));
-const ProfilePage       = lazy(() => import("@/pages/ProfilePage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const SongsPage = lazy(() => import("@/pages/SongsPage"));
+const SongDetailPage = lazy(() => import("@/pages/SongDetailPage"));
+const PracticePage = lazy(() => import("@/pages/PracticePage"));
+const CurriculumPage = lazy(() => import("@/pages/CurriculumPage"));
+const GamesPage = lazy(() => import("@/pages/GamesPage"));
+const AssignmentsPage = lazy(() => import("@/pages/AssignmentsPage"));
+const TeacherDashboard = lazy(() => import("@/pages/TeacherDashboard"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +63,14 @@ function App() {
       setIsInitialized(true);
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    const ch = echo.private("chat.room.1");
+    ch.listen(".message.sent", (e: unknown) => console.log("GOT MESSAGE", e));
+    return () => {
+      echo.leave("chat.room.1");
+    };
   }, []);
 
   if (!isInitialized) {

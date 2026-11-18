@@ -8,5 +8,6 @@
     "Game": true,
     "Teacher": true,
     "Karaoke": true,
-    "AICoach": true
+    "AICoach": true,
+    "Chat": true
 }

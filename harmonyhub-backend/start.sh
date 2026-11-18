@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+
+# If RENDER_SERVICE_TYPE is reverb, start Reverb
+if [ "$RENDER_SERVICE_TYPE" = "reverb" ]; then
+    echo "Starting Reverb server on 0.0.0.0:$PORT"
+    exec php artisan reverb:start --host=0.0.0.0 --port=$PORT
+fi
+
 echo "===== Starting HarmonyHub Backend ====="
 
 # Ensure runtime directories exist and are writable
