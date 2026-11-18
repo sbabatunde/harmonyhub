@@ -8,6 +8,7 @@ import {
   BookOpen,
   Gamepad2,
   ClipboardList,
+  MessageCircle,
   LogOut,
   Menu,
   X,
@@ -34,6 +35,7 @@ export default function MainLayout() {
     { to: "/curriculum", label: "Curriculum", icon: BookOpen },
     { to: "/games", label: "Games", icon: Gamepad2 },
     { to: "/assignments", label: "Assignments", icon: ClipboardList },
+    { to: "/chat", label: "Chat", icon: MessageCircle },
     { to: "/profile", label: "Profile", icon: User },
   ];
 

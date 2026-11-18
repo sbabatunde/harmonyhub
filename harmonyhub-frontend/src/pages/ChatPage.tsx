@@ -60,7 +60,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden rounded-xl border border-loft-plum-100 bg-white shadow-sm">
+    <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] flex overflow-hidden rounded-xl border border-loft-plum-100 bg-white shadow-sm">
       <ChatSidebar
         rooms={rooms}
         activeRoomId={activeRoomId}

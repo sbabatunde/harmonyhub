@@ -8,23 +8,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { lazy, Suspense, useEffect, useState } from "react";
 
-// Layouts — keep eager, they're tiny and render on every page
+// Layouts
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-// Pages — lazy-loaded so each route ships in its own chunk
-const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
-const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const SongsPage = lazy(() => import("@/pages/SongsPage"));
-const SongDetailPage = lazy(() => import("@/pages/SongDetailPage"));
-const PracticePage = lazy(() => import("@/pages/PracticePage"));
-const CurriculumPage = lazy(() => import("@/pages/CurriculumPage"));
-const GamesPage = lazy(() => import("@/pages/GamesPage"));
-const AssignmentsPage = lazy(() => import("@/pages/AssignmentsPage"));
-const TeacherDashboard = lazy(() => import("@/pages/TeacherDashboard"));
-const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+// Pages — lazy-loaded
+const LoginPage         = lazy(() => import("@/pages/LoginPage"));
+const RegisterPage      = lazy(() => import("@/pages/RegisterPage"));
+const DashboardPage     = lazy(() => import("@/pages/DashboardPage"));
+const SongsPage         = lazy(() => import("@/pages/SongsPage"));
+const SongDetailPage    = lazy(() => import("@/pages/SongDetailPage"));
+const PracticePage      = lazy(() => import("@/pages/PracticePage"));
+const CurriculumPage    = lazy(() => import("@/pages/CurriculumPage"));
+const GamesPage         = lazy(() => import("@/pages/GamesPage"));
+const AssignmentsPage   = lazy(() => import("@/pages/AssignmentsPage"));
+const ChatPage          = lazy(() => import("@/pages/ChatPage"));
+const TeacherDashboard  = lazy(() => import("@/pages/TeacherDashboard"));
+const ProfilePage       = lazy(() => import("@/pages/ProfilePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +108,7 @@ function App() {
                 <Route path="/curriculum" element={<CurriculumPage />} />
                 <Route path="/games" element={<GamesPage />} />
                 <Route path="/assignments" element={<AssignmentsPage />} />
+                <Route path="/chat" element={<ChatPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Routes>
