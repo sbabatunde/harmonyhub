@@ -36,12 +36,21 @@ export const chatService = {
     return response.data;
   },
 
+  // async listMessages(
+  //   roomId: number,
+  //   page = 1,
+  // ): Promise<Paginated<ChatMessage>> {
+  //   // Controller returns the paginator UNWRAPPED (no successResponse),
+  //   // so apiClient.get returns the paginator itself. Do NOT .data twice.
+  //   return apiClient.get<Paginated<ChatMessage>>(
+  //     `${API_ENDPOINTS.CHAT.MESSAGES(roomId)}?page=${page}`,
+  //   );
+  // },
+
   async listMessages(
     roomId: number,
     page = 1,
   ): Promise<Paginated<ChatMessage>> {
-    // Controller returns the paginator UNWRAPPED (no successResponse),
-    // so apiClient.get returns the paginator itself. Do NOT .data twice.
     return apiClient.get<Paginated<ChatMessage>>(
       `${API_ENDPOINTS.CHAT.MESSAGES(roomId)}?page=${page}`,
     );
