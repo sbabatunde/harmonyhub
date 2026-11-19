@@ -49,52 +49,92 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] flex overflow-hidden rounded-xl border border-loft-plum-100 bg-white shadow-sm">
-      <ChatSidebar
-        rooms={rooms}
-        activeRoomId={activeRoomId}
-        currentUserId={user.id}
-        isLoading={roomsQuery.isLoading}
-        onSelect={setActiveRoomId}
-        onNewChat={() => setIsNewChatOpen(true)}
-      />
-
-      {activeRoom ? (
-        <ChatWindow
-          room={activeRoom}
+    <div className="h-[calc(100dvh-7.5rem)] lg:h-[calc(100dvh-4rem)] flex overflow-hidden rounded-xl border border-loft-plum-100 bg-white shadow-sm">
+      {/* Sidebar: Full width on mobile when no room is selected; hidden on mobile when a room is open */}
+      <div
+        className={`${
+          activeRoom ? "hidden md:flex" : "flex"
+        } w-full md:w-80 shrink-0 flex-col border-r border-loft-plum-100`}
+      >
+        <ChatSidebar
+          rooms={rooms}
+          activeRoomId={activeRoomId}
           currentUserId={user.id}
-          messages={chat.messages}
-          isLoading={chat.isLoading}
-          isSending={chat.sendText.isPending || chat.sendVoice.isPending}
-          onSendText={(content) => chat.sendText.mutate(content)}
-          onSendVoice={(payload) => chat.sendVoice.mutate(payload)}
-          typingName={typingName}
+          isLoading={roomsQuery.isLoading}
+          onSelect={setActiveRoomId}
+          onNewChat={() => setIsNewChatOpen(true)}
         />
-      ) : (
-        <section className="flex-1 flex items-center justify-center bg-gradient-to-br from-loft-plum-50 to-white">
-          <div className="text-center">
-            <div className="h-16 w-16 mx-auto rounded-full bg-loft-plum-100 flex items-center justify-center mb-4">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-loft-plum-600"
+      </div>
+
+      {/* Main Chat Area: Hidden on mobile until a room is selected; always visible on desktop */}
+      <div
+        className={`${
+          activeRoom ? "flex" : "hidden md:flex"
+        } flex-1 flex-col min-w-0`}
+      >
+        {activeRoom ? (
+          <>
+            {/* Mobile-only Back Bar */}
+            <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-loft-plum-100 bg-loft-plum-50/50">
+              <button
+                type="button"
+                onClick={() => setActiveRoomId(null)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-loft-plum-700 hover:text-loft-plum-900 py-1 px-2 rounded-lg hover:bg-loft-plum-100 transition-colors"
               >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 12H5" />
+                  <path d="m12 19-7-7 7-7" />
+                </svg>
+                Back to chats
+              </button>
             </div>
-            <h2 className="font-display text-xl text-loft-plum-900">
-              Select a conversation
-            </h2>
-            <p className="text-sm text-loft-plum-500 mt-1">
-              Pick a chat from the sidebar, or start a new one.
-            </p>
-          </div>
-        </section>
-      )}
+
+            <ChatWindow
+              room={activeRoom}
+              currentUserId={user.id}
+              messages={chat.messages}
+              isLoading={chat.isLoading}
+              isSending={chat.sendText.isPending || chat.sendVoice.isPending}
+              onSendText={(content) => chat.sendText.mutate(content)}
+              onSendVoice={(payload) => chat.sendVoice.mutate(payload)}
+              typingName={typingName}
+            />
+          </>
+        ) : (
+          <section className="flex-1 flex items-center justify-center bg-gradient-to-br from-loft-plum-50 to-white p-6">
+            <div className="text-center">
+              <div className="h-16 w-16 mx-auto rounded-full bg-loft-plum-100 flex items-center justify-center mb-4">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-loft-plum-600"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <h2 className="font-display text-xl text-loft-plum-900">
+                Select a conversation
+              </h2>
+              <p className="text-sm text-loft-plum-500 mt-1">
+                Pick a chat from the sidebar, or start a new one.
+              </p>
+            </div>
+          </section>
+        )}
+      </div>
 
       <NewChatModal
         isOpen={isNewChatOpen}

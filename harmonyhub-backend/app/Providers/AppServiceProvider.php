@@ -25,5 +25,17 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+
+        $channelPaths = [
+            base_path('routes/channels.php'),
+            base_path('Modules/Chat/routes/channels.php'),
+            base_path('Modules/Chat/Routes/channels.php'),
+        ];
+
+        foreach ($channelPaths as $path) {
+            if (file_exists($path)) {
+                require $path;
+            }
+        }
     }
 }
