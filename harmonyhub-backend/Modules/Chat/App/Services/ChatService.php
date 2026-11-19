@@ -28,10 +28,12 @@ class ChatService
       ->whereHas('members', fn($q) => $q->where('users.id', $a->id))
       ->whereHas('members', fn($q) => $q->where('users.id', $b->id))
       ->withCount('members')
-      ->having('members_count', 2)
-      ->first();
+      ->get()
+      ->first(fn(ChatRoom $room) => $room->members_count === 2);
 
-    if ($existing) return $existing;
+    if ($existing) {
+      return $existing->load('members:id,name,email,role');
+    }
 
     $room = ChatRoom::create([
       'is_group'   => false,
@@ -41,7 +43,6 @@ class ChatService
 
     return $room->load('members:id,name,email,role');
   }
-
   public function createGroup(User $creator, string $name, array $memberIds): ChatRoom
   {
     $room = ChatRoom::create([
