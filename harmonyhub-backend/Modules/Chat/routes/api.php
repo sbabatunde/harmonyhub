@@ -5,6 +5,9 @@ use Modules\Chat\App\Http\Controllers\ChatMessageController;
 use Modules\Chat\App\Http\Controllers\ChatRoomController;
 use Modules\Chat\App\Http\Controllers\ChatVoiceController;
 use Modules\Chat\Http\Controllers\ChatController;
+use Illuminate\Support\Facades\Broadcast;
+
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('chats', ChatController::class)->names('chat');
