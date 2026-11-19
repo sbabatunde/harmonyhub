@@ -15,8 +15,8 @@ echo "Clearing and rebuilding config cache..."
 php artisan config:clear
 php artisan config:cache
 
-# If RENDER_SERVICE_TYPE is reverb, start Reverb
-if [ "$RENDER_SERVICE_TYPE" = "reverb" ]; then
+# Use a custom variable name (Render overwrites RENDER_SERVICE_TYPE with "web")
+if [ "$APP_SERVICE_ROLE" = "reverb" ]; then
     echo "Starting Reverb server on 0.0.0.0:${PORT:-10000}..."
     exec php artisan reverb:start --host=0.0.0.0 --port=${PORT:-10000}
 fi
