@@ -2,12 +2,13 @@
 
 namespace Modules\Chat\App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\ChatRoom;
 use Modules\Chat\App\Services\ChatService;
 
-class ChatMessageController
+class ChatMessageController extends Controller
 {
   public function __construct(private ChatService $chat) {}
 

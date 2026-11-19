@@ -2,13 +2,14 @@
 
 namespace Modules\Chat\App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\ChatRoom;
 use Modules\Chat\App\Services\ChatService;
 
-class ChatRoomController
+class ChatRoomController extends Controller
 {
   public function __construct(private ChatService $chat) {}
 
@@ -20,9 +21,9 @@ class ChatRoomController
   public function store(Request $request): JsonResponse
   {
     $data = $request->validate([
-      'name'       => ['nullable', 'string', 'max:120'],
-      'is_group'   => ['boolean'],
-      'member_ids' => ['required', 'array', 'min:1'],
+      'name'         => ['nullable', 'string', 'max:120'],
+      'is_group'     => ['boolean'],
+      'member_ids'   => ['required', 'array', 'min:1'],
       'member_ids.*' => ['integer', 'exists:users,id'],
     ]);
 

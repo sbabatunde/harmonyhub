@@ -2,13 +2,14 @@
 
 namespace Modules\Chat\App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use Modules\Chat\App\Services\ChatService;
 
-class ChatVoiceController
+class ChatVoiceController extends Controller
 {
   public function __construct(private ChatService $chat) {}
 
@@ -26,7 +27,7 @@ class ChatVoiceController
         $room,
         $request->user(),
         $data['mime'],
-        $data['size_bytes']
+        $data['size_bytes'],
       ),
     ]);
   }
