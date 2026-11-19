@@ -22,5 +22,10 @@ class ChatServiceProvider extends ModuleServiceProvider
         parent::boot();
 
         Gate::policy(ChatRoom::class, ChatRoomPolicy::class);
+
+        $channelsPath = module_path('Chat', 'routes/channels.php');
+        if (file_exists($channelsPath)) {
+            require $channelsPath;
+        }
     }
 }

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-// import { useQuery } from "@tanstack/react-query";
 import type { ChatRoom, ChatMessage } from "@/types";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorder } from "./VoiceRecorder";
@@ -18,6 +17,7 @@ interface ChatWindowProps {
     durationMs: number;
   }) => void;
   typingName: string | null;
+  onBack?: () => void;
 }
 
 function groupMessages(messages: ChatMessage[]) {
@@ -41,6 +41,7 @@ export function ChatWindow({
   onSendText,
   onSendVoice,
   typingName,
+  onBack,
 }: ChatWindowProps) {
   const [draft, setDraft] = useState("");
   const [showRecorder, setShowRecorder] = useState(false);
@@ -63,26 +64,53 @@ export function ChatWindow({
   };
 
   return (
-    <section className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-loft-plum-50/40 to-white">
+    <section className="flex-1 flex flex-col h-full min-h-0 min-w-0 bg-gradient-to-b from-loft-plum-50/40 to-white">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-loft-plum-100 bg-white/80 backdrop-blur">
-        <h3 className="font-display text-lg text-loft-plum-900">
-          {(room.name ??
-            room.members
-              .filter((m) => m.id !== currentUserId)
-              .map((m) => m.name)
-              .join(", ")) ||
-            "Conversation"}
-        </h3>
-        <p className="text-xs text-loft-plum-500">
-          {room.is_group ? `${room.members.length} members` : "Direct message"}
-        </p>
+      <header className="shrink-0 flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-loft-plum-100 bg-white/80 backdrop-blur">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="md:hidden -ml-1 p-1.5 rounded-lg text-loft-plum-700 hover:bg-loft-plum-100 transition-colors"
+            aria-label="Back to conversations"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-base md:text-lg text-loft-plum-900 truncate">
+            {(room.name ??
+              room.members
+                .filter((m) => m.id !== currentUserId)
+                .map((m) => m.name)
+                .join(", ")) ||
+              "Conversation"}
+          </h3>
+          <p className="text-xs text-loft-plum-500">
+            {room.is_group
+              ? `${room.members.length} members`
+              : "Direct message"}
+          </p>
+        </div>
       </header>
 
       {/* Messages */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto px-6 py-4 space-y-1 scroll-smooth"
+        className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4 space-y-1 scroll-smooth"
       >
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
@@ -106,7 +134,7 @@ export function ChatWindow({
       </div>
 
       {/* Composer */}
-      <footer className="border-t border-loft-plum-100 bg-white/90 backdrop-blur px-4 py-3">
+      <footer className="shrink-0 border-t border-loft-plum-100 bg-white/95 backdrop-blur px-3 md:px-4 py-2.5 md:py-3">
         {showRecorder ? (
           <VoiceRecorder
             onComplete={(payload) => {
@@ -122,7 +150,7 @@ export function ChatWindow({
               type="button"
               onClick={() => setShowRecorder(true)}
               disabled={isSending}
-              className="shrink-0 h-11 w-11 rounded-full bg-loft-plum-100 text-loft-plum-700 hover:bg-loft-plum-200 disabled:opacity-50 flex items-center justify-center transition-colors"
+              className="shrink-0 h-10 w-10 md:h-11 md:w-11 rounded-full bg-loft-plum-100 text-loft-plum-700 hover:bg-loft-plum-200 disabled:opacity-50 flex items-center justify-center transition-colors"
               aria-label="Record voice message"
             >
               <svg
@@ -149,14 +177,14 @@ export function ChatWindow({
               }}
               placeholder="Write a message…"
               rows={1}
-              className="flex-1 resize-none rounded-2xl border border-loft-plum-200 bg-loft-plum-50/50 px-4 py-3 text-sm text-loft-plum-900 placeholder:text-loft-plum-400 focus:outline-none focus:ring-2 focus:ring-loft-plum-400 max-h-32"
+              className="flex-1 min-w-0 resize-none rounded-2xl border border-loft-plum-200 bg-loft-plum-50/50 px-3.5 md:px-4 py-2.5 md:py-3 text-sm text-loft-plum-900 placeholder:text-loft-plum-400 focus:outline-none focus:ring-2 focus:ring-loft-plum-400 max-h-32"
               disabled={isSending}
             />
 
             <button
               type="submit"
               disabled={!draft.trim() || isSending}
-              className="shrink-0 h-11 w-11 rounded-full bg-loft-plum-600 text-white hover:bg-loft-plum-700 disabled:opacity-50 flex items-center justify-center transition-transform active:scale-90"
+              className="shrink-0 h-10 w-10 md:h-11 md:w-11 rounded-full bg-loft-plum-600 text-white hover:bg-loft-plum-700 disabled:opacity-50 flex items-center justify-center transition-transform active:scale-90"
               aria-label="Send message"
             >
               {isSending ? (
