@@ -13,12 +13,17 @@ class ChatRoom extends Model
 
     protected $casts = ['is_group' => 'boolean'];
 
-    public function members(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'chat_room_members')
-            ->withPivot('last_read_at')
-            ->withTimestamps();
-    }
+   public function members(): BelongsToMany
+{
+    return $this->belongsToMany(
+        User::class,
+        'chat_room_members',   // pivot table
+        'room_id',             // foreign pivot key   ← the fix
+        'user_id',             // related pivot key
+    )
+        ->withPivot('last_read_at')
+        ->withTimestamps();
+}
 
     public function messages(): HasMany
     {

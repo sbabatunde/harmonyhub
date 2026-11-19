@@ -3,6 +3,7 @@ import type { ChatRoom } from "@/types";
 interface ChatSidebarProps {
   rooms: ChatRoom[];
   activeRoomId: number | null;
+   currentUserId: number;
   isLoading: boolean;
   onSelect: (roomId: number) => void;
   onNewChat: () => void;
@@ -95,12 +96,12 @@ export function ChatSidebar({
                 }`}
               >
                 <div className="h-10 w-10 shrink-0 rounded-full bg-brass-gold-100 text-brass-gold-700 flex items-center justify-center font-semibold">
-                  {roomTitle(room, room.created_by).charAt(0).toUpperCase()}
+                  {roomTitle(room, room.currentUserId).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-loft-plum-900 truncate">
-                      {roomTitle(room, room.created_by)}
+                      {roomTitle(room, room.currentUserId)}
                     </span>
                     <span className="text-xs text-loft-plum-400 shrink-0">
                       {formatRelative(

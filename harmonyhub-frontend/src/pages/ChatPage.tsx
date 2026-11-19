@@ -6,6 +6,7 @@ import { useChatRooms } from "@/hooks/useChatRooms";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
+import { NewChatModal } from "@/components/chat/NewChatModal";
 
 interface TypingPayload {
   user_id: number;
@@ -18,6 +19,7 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const roomsQuery = useChatRooms();
   const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
 
   const rooms = roomsQuery.data ?? [];
   const activeRoom = useMemo(
@@ -27,7 +29,6 @@ export default function ChatPage() {
 
   const chat = useChatMessages(activeRoomId);
 
-  // typing indicator (from useChatMessages cache)
   const typingQuery = useQuery<TypingPayload | null>({
     queryKey: ["chat", "typing", activeRoomId ?? 0],
     enabled: false,
@@ -42,18 +43,6 @@ export default function ChatPage() {
       ? typingQuery.data.user_name
       : null;
 
-  const handleNewChat = () => {
-    // Minimal MVP: just ask for an email and create a DM.
-    const email = window.prompt("Student or teacher email?");
-    if (!email) return;
-    // Real implementation would look up the user id via an API call; for now,
-    // bail out if the rooms list is empty.
-    window.alert(
-      `Creating a room with ${email} requires a user-lookup endpoint. ` +
-        `Once you add GET /api/users?email=…, this can create the room automatically.`,
-    );
-  };
-
   if (!user) {
     navigate("/login", { replace: true });
     return null;
@@ -64,9 +53,10 @@ export default function ChatPage() {
       <ChatSidebar
         rooms={rooms}
         activeRoomId={activeRoomId}
+        currentUserId={user.id}
         isLoading={roomsQuery.isLoading}
         onSelect={setActiveRoomId}
-        onNewChat={handleNewChat}
+        onNewChat={() => setIsNewChatOpen(true)}
       />
 
       {activeRoom ? (
@@ -105,6 +95,12 @@ export default function ChatPage() {
           </div>
         </section>
       )}
+
+      <NewChatModal
+        isOpen={isNewChatOpen}
+        onClose={() => setIsNewChatOpen(false)}
+        onCreated={(roomId) => setActiveRoomId(roomId)}
+      />
     </div>
   );
 }
