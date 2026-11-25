@@ -26,4 +26,9 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
     Route::post('rooms/{room}/voice/presign', [ChatVoiceController::class, 'presign']);
     Route::post('rooms/{room}/voice',         [ChatVoiceController::class, 'store']);
     Route::get('rooms/{room}/messages/{message}/voice-url', [ChatVoiceController::class, 'download']);
+
+    Route::patch('rooms/{room}/messages/{message}', [ChatMessageController::class, 'update']);
+    Route::delete('rooms/{room}/messages/{message}', [ChatMessageController::class, 'destroy']);
+    Route::post('rooms/{room}/messages/{message}/pin', [ChatMessageController::class, 'pin']);
+    Route::get('rooms/{room}/pinned', [ChatMessageController::class, 'pinned']);
 });

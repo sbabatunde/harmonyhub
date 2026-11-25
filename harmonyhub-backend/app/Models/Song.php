@@ -39,6 +39,11 @@ class Song extends Model
     return $this->hasOne(KaraokeTrack::class);
   }
 
+  public function chatMessages()
+  {
+    return $this->hasMany(ChatMessage::class, 'song_id');
+  }
+
   public function createdBy()
   {
     return $this->belongsTo(User::class, 'created_by');

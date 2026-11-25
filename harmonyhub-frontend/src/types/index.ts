@@ -92,11 +92,55 @@ export interface ApiResponse<T> {
 
 // ---- Chat ----
 
+export type UserRole = "student" | "teacher" | "admin";
+
 export interface ChatRoomMember {
   id: number;
   name: string;
   email: string;
-  role: "student" | "teacher" | "admin";
+  role: UserRole;
+  voice_part: string | null;
+  last_seen_at: string | null;
+}
+
+export interface ChatSongRef {
+  id: number;
+  title: string;
+  artist: string | null;
+}
+
+export interface ChatReplyRef {
+  id: number;
+  sender_name: string | null;
+  content: string | null;
+  type: ChatMessageType;
+}
+
+export interface ChatForwardRef {
+  id: number;
+  sender_name: string | null;
+}
+
+export type ChatMessageType = "text" | "voice";
+
+export interface ChatMessage {
+  id: number;
+  room_id: number;
+  sender_id: number;
+  sender_name: string | null;
+  type: ChatMessageType;
+  content: string | null;
+  voice_path: string | null;
+  voice_duration_ms: number | null;
+  voice_size_bytes: number | null;
+  edited_at: string | null;
+  pinned_at: string | null;
+  pinned_by: number | null;
+  deleted_at: string | null;
+  created_at: string;
+  reply_to: ChatReplyRef | null;
+  forwarded_from: ChatForwardRef | null;
+  song: ChatSongRef | null;
 }
 
 export interface ChatRoom {
@@ -107,23 +151,8 @@ export interface ChatRoom {
   created_at: string;
   updated_at: string;
   members: ChatRoomMember[];
-  latest_message?: ChatMessage | null;
-  unread_count?: number;
-}
-
-export type ChatMessageType = "text" | "voice";
-
-export interface ChatMessage {
-  id: number;
-  room_id: number;
-  sender_id: number;
-  sender_name: string;
-  type: ChatMessageType;
-  content: string | null;
-  voice_path: string | null;
-  voice_duration_ms: number | null;
-  voice_size_bytes: number | null;
-  created_at: string;
+  latest_message: ChatMessage | null;
+  unread_count: number;
 }
 
 export interface Paginated<T> {

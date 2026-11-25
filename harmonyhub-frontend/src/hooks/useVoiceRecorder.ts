@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_BYTES = 1 * 1024 * 1024; // 1 MB
 const MAX_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface RecordingResult {
@@ -94,7 +94,7 @@ export function useVoiceRecorder() {
         const durationMs = performance.now() - startedAtRef.current;
         cleanup();
         if (blob.size > MAX_BYTES) {
-          setError("Recording exceeds 10 MB limit.");
+          setError("Recording exceeds 1 MB limit.");
           return;
         }
         if (blob.size === 0) {

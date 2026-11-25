@@ -56,10 +56,18 @@ export const chatService = {
     );
   },
 
-  async sendText(roomId: number, content: string): Promise<ChatMessage> {
+  async sendText(
+    roomId: number,
+    payload: {
+      content?: string;
+      reply_to_id?: number;
+      forwarded_from_id?: number;
+      song_id?: number;
+    },
+  ): Promise<ChatMessage> {
     const response = await apiClient.post<ApiResponse<ChatMessage>>(
       API_ENDPOINTS.CHAT.MESSAGES(roomId),
-      { content },
+      payload,
     );
     return response.data;
   },
@@ -104,5 +112,40 @@ export const chatService = {
       API_ENDPOINTS.CHAT.VOICE_URL(roomId, messageId),
     );
     return response.url;
+  },
+
+  async editMessage(
+    roomId: number,
+    messageId: number,
+    content: string,
+  ): Promise<ChatMessage> {
+    const response = await apiClient.patch<ApiResponse<ChatMessage>>(
+      `/chat/rooms/${roomId}/messages/${messageId}`,
+      { content },
+    );
+    return response.data;
+  },
+
+  async deleteMessage(roomId: number, messageId: number): Promise<void> {
+    await apiClient.delete(`/chat/rooms/${roomId}/messages/${messageId}`);
+  },
+
+  async pinMessage(
+    roomId: number,
+    messageId: number,
+    pinned: boolean,
+  ): Promise<ChatMessage> {
+    const response = await apiClient.post<ApiResponse<ChatMessage>>(
+      `/chat/rooms/${roomId}/messages/${messageId}/pin`,
+      { pinned },
+    );
+    return response.data;
+  },
+
+  async listPinned(roomId: number): Promise<ChatMessage[]> {
+    const response = await apiClient.get<ApiResponse<ChatMessage[]>>(
+      `/chat/rooms/${roomId}/pinned`,
+    );
+    return response.data;
   },
 };

@@ -1,6 +1,6 @@
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Home,
   Music,
@@ -20,7 +20,6 @@ import { GuideLauncher } from "@/components/guide/GuideLauncher";
 export default function MainLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -38,10 +37,6 @@ export default function MainLayout() {
     { to: "/chat", label: "Chat", icon: MessageCircle },
     { to: "/profile", label: "Profile", icon: User },
   ];
-
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-loft-plum-50">
@@ -129,6 +124,7 @@ export default function MainLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  onClick={() => setIsMobileMenuOpen(false)} // ← add this
                   className={({ isActive }) =>
                     cn(
                       "flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors",

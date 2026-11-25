@@ -39,7 +39,7 @@ class ChatVoiceController extends Controller
     $data = $request->validate([
       'voice_path'        => ['required', 'string'],
       'voice_duration_ms' => ['required', 'integer', 'min:1', 'max:300000'],
-      'voice_size_bytes'  => ['required', 'integer', 'min:1', 'max:10485760'],
+      'voice_size_bytes'  => ['required', 'integer', 'min:1', 'max:1048576'],  // 1 MB
     ]);
 
     $message = $this->chat->sendVoice(

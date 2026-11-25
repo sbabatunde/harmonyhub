@@ -68,4 +68,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(Song::class, 'created_by');
     }
+
+    public function lastSeenInRoom(int $roomId): ?\Carbon\Carbon
+    {
+        $member = $this->chatRoomMemberships()->where('room_id', $roomId)->first();
+        return $member?->last_seen_at;
+    }
+
+    public function chatRoomMemberships()
+    {
+        return $this->hasMany(ChatRoomMember::class);
+    }
 }

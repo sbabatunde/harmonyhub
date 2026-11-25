@@ -156,6 +156,31 @@
   font-weight: 500;
 }
 
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-loft-plum-400);
+  pointer-events: none;
+  height: 0;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 @utility badge-gold {
   background-color: var(--color-brass-gold-100);
   color: var(--color-brass-gold-800);

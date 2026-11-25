@@ -13,17 +13,17 @@ class ChatRoom extends Model
 
     protected $casts = ['is_group' => 'boolean'];
 
-   public function members(): BelongsToMany
-{
-    return $this->belongsToMany(
-        User::class,
-        'chat_room_members',   // pivot table
-        'room_id',             // foreign pivot key   ← the fix
-        'user_id',             // related pivot key
-    )
-        ->withPivot('last_read_at')
-        ->withTimestamps();
-}
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'chat_room_members',   // pivot table
+            'room_id',             // foreign pivot key   ← the fix
+            'user_id',             // related pivot key
+        )
+            ->withPivot('last_read_at')
+            ->withTimestamps();
+    }
 
     public function messages(): HasMany
     {
@@ -38,5 +38,29 @@ class ChatRoom extends Model
     public function hasMember(int $userId): bool
     {
         return $this->members()->where('users.id', $userId)->exists();
+    }
+
+    public function toClientArray(): array
+    {
+        return [
+            'id'         => $this->id,
+            'name'       => $this->name,
+            'is_group'   => $this->is_group,
+            'created_by' => $this->created_by,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+            'members'    => $this->members->map(fn(User $u) => [
+                'id'           => $u->id,
+                'name'         => $u->name,
+                'email'        => $u->email,
+                'role'         => $u->role?->value,
+                'voice_part'   => $u->voice_part?->value,
+                'last_seen_at' => $u->pivot?->last_seen_at?->toIso8601String(),
+            ])->toArray(),
+            'latest_message' => $this->latestMessage
+                ? $this->latestMessage->toClientArray()
+                : null,
+            'unread_count' => $this->unread_count ?? 0,
+        ];
     }
 }

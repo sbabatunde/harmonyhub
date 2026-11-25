@@ -6,19 +6,6 @@ import type { ChatMessage, Paginated } from "@/types";
 
 const messageKey = (roomId: number) => ["chat", "messages", roomId];
 
-interface MessageSentPayload {
-  id: number;
-  room_id: number;
-  sender_id: number;
-  sender_name: string;
-  type: "text" | "voice";
-  content: string | null;
-  voice_path: string | null;
-  voice_duration_ms: number | null;
-  voice_size_bytes: number | null;
-  created_at: string;
-}
-
 type MessagesCache = Paginated<ChatMessage>;
 
 export function useChatMessages(roomId: number | null) {
@@ -39,16 +26,50 @@ export function useChatMessages(roomId: number | null) {
     const channel = echo.private(`chat.room.${roomId}`);
     channelRef.current = channel;
 
-    channel.listen(".message.sent", (payload: MessageSentPayload) => {
+    channel.listen(".message.sent", (payload: ChatMessage) => {
       qc.setQueryData<MessagesCache | undefined>(messageKey(roomId), (old) => {
         if (!old) return old;
-        // dedupe — the sender may already have it via optimistic update
         if (old.data.some((m) => m.id === payload.id)) return old;
         return { ...old, data: [...old.data, payload] };
       });
-      // refresh room list so latest message / unread counts update
       qc.invalidateQueries({ queryKey: ["chat", "rooms"] });
     });
+
+    channel.listen(".message.updated", (payload: ChatMessage) => {
+      qc.setQueryData<MessagesCache | undefined>(messageKey(roomId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((m) => (m.id === payload.id ? payload : m)),
+        };
+      });
+      qc.invalidateQueries({ queryKey: ["chat", "pinned", roomId] });
+    });
+
+    channel.listen(
+      ".message.deleted",
+      (payload: { id: number; room_id: number }) => {
+        qc.setQueryData<MessagesCache | undefined>(
+          messageKey(roomId),
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              data: old.data.map((m) =>
+                m.id === payload.id
+                  ? {
+                      ...m,
+                      content: null,
+                      voice_path: null,
+                      deleted_at: new Date().toISOString(),
+                    }
+                  : m,
+              ),
+            };
+          },
+        );
+      },
+    );
 
     channel.listen(
       ".user.typing",
@@ -65,25 +86,36 @@ export function useChatMessages(roomId: number | null) {
 
   // Send text message with optimistic insert
   const sendText = useMutation({
-    mutationFn: (content: string) =>
-      chatService.sendText(roomId as number, content),
-    onMutate: async (content) => {
+    mutationFn: (payload: {
+      content?: string;
+      reply_to_id?: number;
+      forwarded_from_id?: number;
+      song_id?: number;
+    }) => chatService.sendText(roomId as number, payload),
+    onMutate: async (payload) => {
       if (!roomId) return;
       const key = messageKey(roomId);
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<MessagesCache>(key);
-      if (previous) {
+      if (previous && payload.content) {
         const optimistic: ChatMessage = {
           id: -Date.now(),
           room_id: roomId,
           sender_id: 0,
           sender_name: "You",
           type: "text",
-          content,
+          content: payload.content,
           voice_path: null,
           voice_duration_ms: null,
           voice_size_bytes: null,
+          edited_at: null,
+          pinned_at: null,
+          pinned_by: null,
+          deleted_at: null,
           created_at: new Date().toISOString(),
+          reply_to: null,
+          forwarded_from: null,
+          song: null,
         };
         qc.setQueryData<MessagesCache>(key, {
           ...previous,
@@ -92,7 +124,7 @@ export function useChatMessages(roomId: number | null) {
       }
       return { previous };
     },
-    onError: (_err, _content, ctx) => {
+    onError: (_err, _payload, ctx) => {
       if (roomId && ctx?.previous) {
         qc.setQueryData(messageKey(roomId), ctx.previous);
       }
@@ -146,11 +178,78 @@ export function useChatMessages(roomId: number | null) {
     },
   });
 
+  const editText = useMutation({
+    mutationFn: (vars: { messageId: number; content: string }) =>
+      chatService.editMessage(roomId as number, vars.messageId, vars.content),
+    onSuccess: (updated) => {
+      if (!roomId) return;
+      qc.setQueryData<MessagesCache | undefined>(messageKey(roomId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((m) => (m.id === updated.id ? updated : m)),
+        };
+      });
+    },
+  });
+
+  const deleteMessage = useMutation({
+    mutationFn: (messageId: number) =>
+      chatService.deleteMessage(roomId as number, messageId),
+    onSuccess: (_data, messageId) => {
+      if (!roomId) return;
+      qc.setQueryData<MessagesCache | undefined>(messageKey(roomId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  content: null,
+                  voice_path: null,
+                  deleted_at: new Date().toISOString(),
+                }
+              : m,
+          ),
+        };
+      });
+    },
+  });
+
+  const pinMessage = useMutation({
+    mutationFn: (vars: { messageId: number; pinned: boolean }) =>
+      chatService.pinMessage(roomId as number, vars.messageId, vars.pinned),
+    onSuccess: (updated) => {
+      if (!roomId) return;
+      qc.setQueryData<MessagesCache | undefined>(messageKey(roomId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((m) => (m.id === updated.id ? updated : m)),
+        };
+      });
+      qc.invalidateQueries({ queryKey: ["chat", "pinned", roomId] });
+    },
+  });
+
+  const pinnedQuery = useQuery<ChatMessage[]>({
+    queryKey: ["chat", "pinned", roomId ?? 0],
+    queryFn: () => chatService.listPinned(roomId as number),
+    enabled: !!roomId,
+    staleTime: 30_000,
+  });
+
   return {
     messages: messagesQuery.data?.data ?? [],
     isLoading: messagesQuery.isLoading,
     isError: messagesQuery.isError,
     sendText,
     sendVoice,
+    editText,
+    deleteMessage,
+    pinMessage,
+    pinned: pinnedQuery.data ?? [],
+    pinnedLoading: pinnedQuery.isLoading,
   };
 }

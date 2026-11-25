@@ -1,6 +1,6 @@
 // src/api/client.ts
-import { AxiosRequestConfig, AxiosResponse } from 'axios';
-import { api } from '@/config/api';
+import { AxiosRequestConfig, AxiosResponse } from "axios";
+import { api } from "@/config/api";
 
 /**
  * Thin convenience wrapper around the single shared axios instance in
@@ -19,13 +19,30 @@ class ApiClient {
     return response.data;
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response: AxiosResponse<T> = await api.post(url, data, config);
     return response.data;
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response: AxiosResponse<T> = await api.put(url, data, config);
+    return response.data;
+  }
+
+  async patch<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
+    const response: AxiosResponse<T> = await api.patch(url, data, config);
     return response.data;
   }
 

@@ -1,4 +1,5 @@
 import type { ChatRoom } from "@/types";
+import { cn } from "@/utils/helpers";
 
 interface ChatSidebarProps {
   rooms: ChatRoom[];
@@ -16,9 +17,7 @@ function roomTitle(room: ChatRoom, currentUserId: number): string {
 }
 
 function roomSubtitle(room: ChatRoom): string {
-  if (room.is_group) {
-    return `${room.members.length} members`;
-  }
+  if (room.is_group) return `${room.members.length} members`;
   return "Direct message";
 }
 
@@ -36,6 +35,16 @@ function formatRelative(iso?: string | null): string {
   return date.toLocaleDateString();
 }
 
+function memberPresence(m: {
+  last_seen_at: string | null;
+}): "online" | "recent" | "offline" {
+  if (!m.last_seen_at) return "offline";
+  const diff = Date.now() - new Date(m.last_seen_at).getTime();
+  if (diff < 2 * 60_000) return "online";
+  if (diff < 60 * 60_000) return "recent";
+  return "offline";
+}
+
 export function ChatSidebar({
   rooms,
   activeRoomId,
@@ -46,14 +55,20 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   if (isLoading) {
     return (
-      <aside className="w-80 shrink-0 border-r border-loft-plum-100 bg-loft-plum-50/50 flex items-center justify-center">
+      <aside className="w-full md:w-80 shrink-0 border-r border-loft-plum-100 bg-loft-plum-50/50 flex items-center justify-center">
         <span className="h-6 w-6 border-2 border-loft-plum-400 border-t-transparent rounded-full animate-spin" />
       </aside>
     );
   }
 
   return (
-    <aside className="w-80 shrink-0 border-r border-loft-plum-100 bg-loft-plum-50/50 flex flex-col">
+    <aside
+      className={cn(
+        "shrink-0 border-r border-loft-plum-100 bg-loft-plum-50/50 flex flex-col",
+        "w-full md:w-80",
+        activeRoomId ? "hidden md:flex" : "flex",
+      )}
+    >
       <div className="p-4 border-b border-loft-plum-100 flex items-center justify-between">
         <h2 className="font-display text-lg text-loft-plum-900">Messages</h2>
         <button
@@ -86,19 +101,43 @@ export function ChatSidebar({
           rooms.map((room) => {
             const active = room.id === activeRoomId;
             const title = roomTitle(room, currentUserId);
+            const isGroup = room.is_group;
+            const other = isGroup
+              ? null
+              : room.members.find((m) => m.id !== currentUserId);
+            const presence = other ? memberPresence(other) : null;
             return (
               <button
                 key={room.id}
                 type="button"
                 onClick={() => onSelect(room.id)}
-                className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors border-b border-loft-plum-100/60 ${
+                className={cn(
+                  "w-full text-left px-4 py-3 flex items-start gap-3 transition-colors",
+                  "border-b border-loft-plum-100/60 border-l-4",
                   active
-                    ? "bg-white border-l-4 border-l-loft-plum-600"
-                    : "hover:bg-white/70 border-l-4 border-l-transparent"
-                }`}
+                    ? "bg-white border-l-loft-plum-600"
+                    : "hover:bg-white/70 border-l-transparent",
+                )}
               >
-                <div className="h-10 w-10 shrink-0 rounded-full bg-brass-gold-100 text-brass-gold-700 flex items-center justify-center font-semibold">
-                  {title.charAt(0).toUpperCase()}
+                <div className="relative shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-brass-gold-100 text-brass-gold-700 flex items-center justify-center font-semibold">
+                    {title.charAt(0).toUpperCase()}
+                  </div>
+                  {isGroup && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-loft-plum-600 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                      {room.members.length}
+                    </span>
+                  )}
+                  {!isGroup && presence && (
+                    <span
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white",
+                        presence === "online" && "bg-choir-sage-500",
+                        presence === "recent" && "bg-brass-gold-400",
+                        presence === "offline" && "bg-loft-plum-300",
+                      )}
+                    />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">

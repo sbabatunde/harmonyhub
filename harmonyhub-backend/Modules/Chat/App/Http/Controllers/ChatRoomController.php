@@ -15,7 +15,24 @@ class ChatRoomController extends Controller
 
   public function index(Request $request): JsonResponse
   {
-    return response()->json(['data' => $this->chat->listRoomsFor($request->user())]);
+    $user = $request->user();
+    $this->chat->touchPresenceForAllRooms($user);
+
+    return response()->json([
+      'data' => $this->chat->listRoomsFor($user)
+        ->map(fn($room) => $room->toClientArray())
+        ->all(),
+    ]);
+  }
+
+  public function show(Request $request, ChatRoom $room): JsonResponse
+  {
+    $this->authorize('view', $room);
+    $room->load([
+      'members' => fn($q) => $q->withPivot('last_seen_at'),
+    ]);
+
+    return response()->json(['data' => $room->toClientArray()]);
   }
 
   public function store(Request $request): JsonResponse
@@ -33,18 +50,14 @@ class ChatRoomController extends Controller
       $other = User::findOrFail($data['member_ids'][0]);
       $room  = $this->chat->findOrCreateDirectRoom($user, $other);
     } else {
-      abort_unless($user->role === 'teacher' || $user->role === 'admin', 403);
+      abort_unless(
+        $user->role === \App\Enums\UserRole::Teacher
+          || $user->role === \App\Enums\UserRole::Admin,
+        403,
+      );
       $room = $this->chat->createGroup($user, $data['name'] ?? 'Group', $data['member_ids']);
     }
 
-    return response()->json(['data' => $room], 201);
-  }
-
-  public function show(Request $request, ChatRoom $room): JsonResponse
-  {
-    $this->authorize('view', $room);
-    $room->load('members:id,name,email,role');
-
-    return response()->json(['data' => $room]);
+    return response()->json(['data' => $room->toClientArray()], 201);
   }
 }

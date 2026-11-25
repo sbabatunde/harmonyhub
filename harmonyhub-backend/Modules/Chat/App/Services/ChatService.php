@@ -2,12 +2,15 @@
 
 namespace Modules\Chat\App\Services;
 
-use App\Models\User;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Modules\Chat\App\Events\MessageSent;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Modules\Chat\App\Events\MessageDeleted;
+use Modules\Chat\App\Events\MessageSent;
+use Modules\Chat\App\Events\MessageUpdated;
 
 class ChatService
 {
@@ -15,8 +18,10 @@ class ChatService
   {
     return ChatRoom::query()
       ->whereHas('members', fn($q) => $q->where('users.id', $user->id))
-      ->orWhere('created_by', $user->id)
-      ->with(['members:id,name,email,role', 'latestMessage.sender:id,name'])
+      ->with([
+        'members' => fn($q) => $q->withPivot('last_seen_at'),
+        'latestMessage.sender:id,name',
+      ])
       ->orderByDesc('updated_at')
       ->get();
   }
@@ -58,23 +63,97 @@ class ChatService
   public function listMessages(ChatRoom $room, int $perPage = 30)
   {
     return $room->messages()
-      ->with('sender:id,name')
+      ->with([
+        'sender:id,name',
+        'replyTo.sender:id,name',
+        'song:id,title,artist',
+      ])
       ->orderByDesc('created_at')
       ->paginate($perPage);
   }
 
-  public function sendText(ChatRoom $room, User $sender, string $content): ChatMessage
-  {
+  public function sendText(
+    ChatRoom $room,
+    User $sender,
+    string $content,
+    ?int $replyToId = null,
+    ?int $forwardedFromId = null,
+    ?int $songId = null,
+  ): ChatMessage {
     $message = ChatMessage::create([
-      'room_id'   => $room->id,
-      'sender_id' => $sender->id,
-      'type'      => 'text',
-      'content'   => $content,
+      'room_id'           => $room->id,
+      'sender_id'         => $sender->id,
+      'reply_to_id'       => $replyToId,
+      'forwarded_from_id' => $forwardedFromId,
+      'song_id'           => $songId,
+      'type'              => 'text',
+      'content'           => $content,
     ]);
     $room->touch();
     broadcast(new MessageSent($message))->toOthers();
 
-    return $message->load('sender:id,name');
+    return $message->load(['sender:id,name', 'replyTo.sender:id,name', 'song:id,title,artist']);
+  }
+
+  public function editMessage(ChatMessage $message, User $user, string $content): ChatMessage
+  {
+    if (! $message->isEditableBy($user)) {
+      abort(403, 'This message can no longer be edited.');
+    }
+
+    $message->update([
+      'content'   => $content,
+      'edited_at' => now(),
+    ]);
+
+    $message = $message->fresh(['sender:id,name', 'replyTo.sender:id,name', 'song:id,title,artist']);
+    broadcast(new MessageUpdated($message))->toOthers();
+
+    return $message;
+  }
+
+  public function deleteMessage(ChatMessage $message, User $user): void
+  {
+    if (! $message->isDeletableBy($user)) {
+      abort(403, 'You cannot delete this message.');
+    }
+
+    // Soft-delete + scrub content so the UI shows "This message was deleted"
+    $message->update(['content' => null, 'voice_path' => null]);
+    $message->delete();
+
+    broadcast(new MessageDeleted($message->id, $message->room_id))->toOthers();
+  }
+
+  public function pinMessage(ChatMessage $message, User $user, bool $pinned): ChatMessage
+  {
+    if (! $message->room->hasMember($user->id)) {
+      abort(403);
+    }
+
+    $message->update([
+      'pinned_at' => $pinned ? now() : null,
+      'pinned_by' => $pinned ? $user->id : null,
+    ]);
+
+    $message = $message->fresh(['sender:id,name', 'replyTo.sender:id,name', 'song:id,title,artist']);
+    broadcast(new MessageUpdated($message))->toOthers();
+
+    return $message;
+  }
+
+  public function listPinnedMessages(ChatRoom $room)
+  {
+    return $room->messages()
+      ->whereNotNull('pinned_at')
+      ->with(['sender:id,name', 'song:id,title,artist'])
+      ->orderByDesc('pinned_at')
+      ->get();
+  }
+
+  public function touchPresence(ChatRoom $room, User $user): void
+  {
+    $room->members()->updateExistingPivot($user->id, ['last_seen_at' => now()]);
   }
 
   public function sendVoice(
@@ -100,8 +179,8 @@ class ChatService
 
   public function presignVoiceUpload(ChatRoom $room, User $sender, string $mime, int $sizeBytes): array
   {
-    if ($sizeBytes > 10 * 1024 * 1024) {
-      abort(422, 'Voice message too large (max 10 MB).');
+    if ($sizeBytes > 1 * 1024 * 1024) {
+      abort(422, 'Voice message too large (max 1 MB).');
     }
     $allowed = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/ogg'];
     if (! in_array($mime, $allowed, true)) {
@@ -139,5 +218,12 @@ class ChatService
   public function markRead(ChatRoom $room, User $user): void
   {
     $room->members()->updateExistingPivot($user->id, ['last_read_at' => now()]);
+  }
+
+  public function touchPresenceForAllRooms(User $user): void
+  {
+    DB::table('chat_room_members')
+      ->where('user_id', $user->id)
+      ->update(['last_seen_at' => now()]);
   }
 }
